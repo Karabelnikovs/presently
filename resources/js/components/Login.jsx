@@ -1,7 +1,13 @@
-// Login.js
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { getCsrfToken, getCookie } from '../utils/csrf';
+import Alert from './Alert';
+
 const Login = ({ setUser }) => {
+    const [modalOpen, setModalOpen] = useState(false);
+    const [modalMessage, setModalMessage] = useState('');
+    const [modalType, setModalType] = useState('success');
+
     const [loaded, setLoaded] = useState(false);
     useEffect(() => {
         setTimeout(() => setLoaded(true), 100);
@@ -11,12 +17,13 @@ const Login = ({ setUser }) => {
     const navigate = useNavigate();
     const handleSubmit = async (e) => {
         e.preventDefault();
-        const token = document.querySelector('meta[name="csrf-token"]').content;
+        await getCsrfToken();
+        const xsrfToken = decodeURIComponent(getCookie('XSRF-TOKEN') || '');
         const res = await fetch("/login", {
             method: "POST",
             headers: {
                 "Content-Type": "application/x-www-form-urlencoded",
-                "X-CSRF-TOKEN": token,
+                "X-XSRF-TOKEN": xsrfToken,
                 Accept: "application/json",
             },
             body: new URLSearchParams({ email, password }),
@@ -24,11 +31,15 @@ const Login = ({ setUser }) => {
         });
         if (!res.ok) {
             const data = await res.json();
-            alert(data.message || "Login failed");
+            setModalMessage(data.message || "Login failed");
+            setModalType('error');
+            setModalOpen(true);
+
             return;
         }
         const data = await res.json();
         setUser(data.user);
+        await getCsrfToken();
         navigate("/generate");
     };
     return (
@@ -80,6 +91,12 @@ const Login = ({ setUser }) => {
                     Login
                 </button>
             </form>
+            <Alert
+                isOpen={modalOpen}
+                onClose={() => setModalOpen(false)}
+                message={modalMessage}
+                type={modalType}
+            />
         </div>
     );
 };

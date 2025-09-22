@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { getCsrfToken, getCookie } from '../utils/csrf';
+import Alert from './Alert';
 
-// TOPICS and TEMPLATES arrays remain the same...
 const TOPICS = [
     "Let AI do the heavy lifting for you.",
     "AI in Healthcare: Opportunities and Risks",
@@ -132,6 +133,10 @@ const Generate = ({ user }) => {
     const [isFormLoaded, setIsFormLoaded] = useState(false);
     const navigate = useNavigate();
 
+    const [modalOpen, setModalOpen] = useState(false);
+    const [modalMessage, setModalMessage] = useState('');
+    const [modalType, setModalType] = useState('success');
+
     const pickRandomTopic = useCallback(() => {
         const idx = Math.floor(Math.random() * TOPICS.length);
         return TOPICS[idx];
@@ -163,17 +168,14 @@ const Generate = ({ user }) => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setIsLoading(true);
-
-        const csrfToken = document
-            .querySelector('meta[name="csrf-token"]')
-            ?.getAttribute("content");
-
+        await getCsrfToken();
+        const xsrfToken = decodeURIComponent(getCookie('XSRF-TOKEN') || '');
         try {
             const response = await fetch("/generate-presentation", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    "X-CSRF-TOKEN": csrfToken,
+                    "X-XSRF-TOKEN": xsrfToken,
                     Accept: "application/json",
                 },
                 body: JSON.stringify({
@@ -181,11 +183,13 @@ const Generate = ({ user }) => {
                     slides: Number(slides),
                     template,
                 }),
+                credentials: "include",
             });
 
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(errorData.error || "Server error");
+                const errorMsg = errorData.message || errorData.error || (errorData.errors ? Object.values(errorData.errors).flat().join(' ') : "Server error");
+                throw new Error(errorMsg);
             }
 
             const data = await response.json();
@@ -197,12 +201,14 @@ const Generate = ({ user }) => {
             }
         } catch (error) {
             console.error("Error:", error);
-            alert(`Error: ${error.message}`);
+
+            setModalMessage(`Error: ${error.message}`);
+            setModalType('error');
+            setModalOpen(true);
         } finally {
             setIsLoading(false);
         }
     };
-
     const handleCardKey = (e, templateId) => {
         if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
@@ -419,6 +425,12 @@ const Generate = ({ user }) => {
                     </p>
                 </div>
             </div>
+            <Alert
+                isOpen={modalOpen}
+                onClose={() => setModalOpen(false)}
+                message={modalMessage}
+                type={modalType}
+            />
         </>
     );
 };

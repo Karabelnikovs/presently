@@ -1,6 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { getCsrfToken, getCookie } from '../utils/csrf';
+import Alert from './Alert';
+
 const Register = ({ setUser }) => {
+
+    const [modalOpen, setModalOpen] = useState(false);
+    const [modalMessage, setModalMessage] = useState('');
+    const [modalType, setModalType] = useState('success');
+
+
     const [loaded, setLoaded] = useState(false);
     useEffect(() => {
         setTimeout(() => setLoaded(true), 100);
@@ -12,12 +21,13 @@ const Register = ({ setUser }) => {
     const navigate = useNavigate();
     const handleSubmit = async (e) => {
         e.preventDefault();
-        const token = document.querySelector('meta[name="csrf-token"]').content;
+        await getCsrfToken();
+        const xsrfToken = decodeURIComponent(getCookie('XSRF-TOKEN') || '');
         const res = await fetch("/register", {
             method: "POST",
             headers: {
                 "Content-Type": "application/x-www-form-urlencoded",
-                "X-CSRF-TOKEN": token,
+                "X-XSRF-TOKEN": xsrfToken,
                 Accept: "application/json",
             },
             body: new URLSearchParams({
@@ -30,12 +40,16 @@ const Register = ({ setUser }) => {
         });
         if (!res.ok) {
             const data = await res.json();
-            alert(data.message || "Registration failed");
+            setModalMessage(data.message || "Registration failed");
+            setModalType('error');
+            setModalOpen(true);
+
             return;
         }
         const data = await res.json();
         setUser(data.user);
-        navigate("/");
+        await getCsrfToken();
+        navigate("/generate");
     };
     return (
         <div
@@ -120,6 +134,12 @@ const Register = ({ setUser }) => {
                     Register
                 </button>
             </form>
+            <Alert
+                isOpen={modalOpen}
+                onClose={() => setModalOpen(false)}
+                message={modalMessage}
+                type={modalType}
+            />
         </div>
     );
 };

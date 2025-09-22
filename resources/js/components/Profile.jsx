@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { getCsrfToken, getCookie } from '../utils/csrf';
+import Alert from './Alert';
+
 const Profile = ({ user, setUser }) => {
     console.log(user);
     const [loaded, setLoaded] = useState(false);
@@ -11,6 +14,10 @@ const Profile = ({ user, setUser }) => {
     const [password, setPassword] = useState("");
     const [passwordConfirmation, setPasswordConfirmation] = useState("");
     const navigate = useNavigate();
+
+    const [modalOpen, setModalOpen] = useState(false);
+    const [modalMessage, setModalMessage] = useState('');
+    const [modalType, setModalType] = useState('success');
 
     useEffect(() => {
         const hasUser =
@@ -44,7 +51,9 @@ const Profile = ({ user, setUser }) => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        const token = document.querySelector('meta[name="csrf-token"]').content;
+        await getCsrfToken();
+        const xsrfToken = decodeURIComponent(getCookie('XSRF-TOKEN') || '');
+
         const body = { name, email };
         if (password) {
             body.password = password;
@@ -54,7 +63,7 @@ const Profile = ({ user, setUser }) => {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                "X-CSRF-TOKEN": token,
+                "X-XSRF-TOKEN": xsrfToken,
                 Accept: "application/json",
             },
             body: JSON.stringify(body),
@@ -62,11 +71,17 @@ const Profile = ({ user, setUser }) => {
         });
         if (!res.ok) {
             const data = await res.json();
-            alert(data.message || "Update failed");
+            setModalMessage(data.message || "Update failed");
+            setModalType('error');
+            setModalOpen(true);
             return;
         }
         setUser({ ...user, name, email });
-        alert("Profile updated");
+        await getCsrfToken();
+
+        setModalMessage("Profile updated");
+        setModalType('success');
+        setModalOpen(true);
     };
 
     return (
@@ -150,6 +165,12 @@ const Profile = ({ user, setUser }) => {
                     Update Profile
                 </button>
             </form>
+            <Alert
+                isOpen={modalOpen}
+                onClose={() => setModalOpen(false)}
+                message={modalMessage}
+                type={modalType}
+            />
         </div>
     );
 };

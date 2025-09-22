@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom"; // Add useNavigate import
+import { getCsrfToken, getCookie } from '../utils/csrf'; // Adjust path if needed
 
 const NavLink = ({ to, children, onClick }) => (
     <Link
@@ -13,23 +14,32 @@ const NavLink = ({ to, children, onClick }) => (
 
 const Navbar = ({ user, setUser }) => {
     const [isOpen, setIsOpen] = useState(false);
+    const navigate = useNavigate(); // Add this
 
     const closeMenu = () => setIsOpen(false);
 
     const handleLogout = async () => {
-        closeMenu();
-        const token = document.querySelector('meta[name="csrf-token"]').content;
-        const res = await fetch("/logout", {
-            method: "POST",
-            headers: {
-                "X-CSRF-TOKEN": token,
-                "Content-Type": "application/json",
-                Accept: "application/json",
-            },
-        });
-        if (res.ok) {
+        await getCsrfToken();
+        const xsrfToken = decodeURIComponent(getCookie('XSRF-TOKEN') || '');
+        try {
+            const response = await fetch('/logout', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-XSRF-TOKEN': xsrfToken,
+                    'Accept': 'application/json',
+                },
+                credentials: 'include',
+            });
+
+            if (!response.ok) {
+                throw new Error('Logout failed');
+            }
+
             setUser(null);
-            window.location.href = "/";
+            navigate('/login');
+        } catch (error) {
+            console.error('Logout error:', error);
         }
     };
 

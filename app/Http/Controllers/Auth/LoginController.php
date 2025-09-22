@@ -14,8 +14,8 @@ use Illuminate\Support\Str;
 class LoginController extends Controller
 {
     protected $redirectTo = '/generate';
-    protected $maxAttempts = 5; // Default from old trait; adjust if needed
-    protected $decayMinutes = 1; // Default from old trait; adjust if needed
+    protected $maxAttempts = 5;
+    protected $decayMinutes = 1;
 
     public function showLoginForm()
     {
@@ -131,7 +131,6 @@ class LoginController extends Controller
         return Auth::guard();
     }
 
-    // Throttle-related methods (from ThrottlesLogins trait, which was included in the old AuthenticatesUsers)
     protected function hasTooManyLoginAttempts(Request $request)
     {
         return $this->limiter()->tooManyAttempts(
