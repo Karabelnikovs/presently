@@ -22,6 +22,8 @@
             padding: 1rem;
         }
     </style>
+    <link rel="icon" type="image/x-icon" href="/presently_favicon.png">
+
 </head>
 
 <body>

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom"; // Add useNavigate import
-import { getCsrfToken, getCookie } from '../utils/csrf'; // Adjust path if needed
+import { Link, useNavigate } from "react-router-dom";
+import { getCsrfToken, getCookie } from '../utils/csrf';
 
 const NavLink = ({ to, children, onClick }) => (
     <Link
@@ -14,7 +14,7 @@ const NavLink = ({ to, children, onClick }) => (
 
 const Navbar = ({ user, setUser }) => {
     const [isOpen, setIsOpen] = useState(false);
-    const navigate = useNavigate(); // Add this
+    const navigate = useNavigate();
 
     const closeMenu = () => setIsOpen(false);
 
@@ -51,7 +51,7 @@ const Navbar = ({ user, setUser }) => {
                     onClick={closeMenu}
                     className="text-white text-xl font-bold mr-4 shrink-0"
                 >
-                    Presently
+                    <img src="/presently_logo.png " className='max-h-12' alt="Presentlty Logo"/>
                 </Link>
 
                 <div className="hidden md:flex items-center space-x-6">

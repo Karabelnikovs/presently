@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { getCsrfToken, getCookie } from '../utils/csrf';
-import Alert from './Alert';
+import { getCsrfToken, getCookie } from "../utils/csrf";
+import Alert from "./Alert";
 
 const TOPICS = [
     "Let AI do the heavy lifting for you.",
@@ -31,97 +31,49 @@ const TEMPLATES = [
         id: "default",
         name: "Default (Clean White)",
         description: "White background, black text",
-        bg: "#FFFFFF",
-        titleColor: "#000000",
-        textColor: "#000000",
-        sampleTitle: "Presentation Title",
-        sampleBullets: [
-            "Key point one",
-            "Another important item",
-            "Quick takeaway",
-        ],
+        preview_image: "url('/templates_previews/default.png')",
     },
     {
         id: "modern",
-        name: "Modern (Slate Blue)",
-        description: "Slate-blue background, white text",
-        bg: "#475569",
-        titleColor: "#FFFFFF",
-        textColor: "#FFFFFF",
-        sampleTitle: "Modern Slide",
-        sampleBullets: ["Why it matters", "Short example", "Benefit"],
+        name: "Modern (Image Focused)",
+        description: "Image background, dark text",
+        preview_image: "url('/templates_previews/modern.png')",
     },
     {
         id: "corporate",
-        name: "Corporate (Green Tones)",
+        name: "Corporate (Gray Tones)",
         description: "Deep green background, white text",
-        bg: "#065F46",
-        titleColor: "#FFFFFF",
-        textColor: "#FFFFFF",
-        sampleTitle: "Corporate Slide",
-        sampleBullets: ["Stat or KPI", "Recommendation", "Next steps"],
+        preview_image: "url('/templates_previews/corporate.png')",
     },
     {
         id: "vibrant",
         name: "Vibrant (Orange Energy)",
         description: "Bright orange background, dark text",
-        bg: "#F97316",
-        titleColor: "#1F2937",
-        textColor: "#1F2937",
-        sampleTitle: "Vibrant Slide",
-        sampleBullets: [
-            "Energize your ideas",
-            "Bold statement",
-            "Call to action",
-        ],
+        preview_image: "url('/templates_previews/vibrant.png')",
     },
     {
         id: "minimalist",
-        name: "Minimalist (Light Gray)",
-        description: "Soft gray background, black text",
-        bg: "#F3F4F6",
-        titleColor: "#000000",
-        textColor: "#000000",
-        sampleTitle: "Minimalist Slide",
-        sampleBullets: ["Simple point", "Clear insight", "Essential fact"],
+        name: "Minimalist",
+        description: "Shapes on background, black text",
+        preview_image: "url('/templates_previews/minimalist.png')",
     },
     {
         id: "professional",
         name: "Professional (Navy Blue)",
         description: "Navy blue background, white text",
-        bg: "#1E3A8A",
-        titleColor: "#FFFFFF",
-        textColor: "#FFFFFF",
-        sampleTitle: "Professional Slide",
-        sampleBullets: [
-            "Strategic overview",
-            "Key metric",
-            "Implementation plan",
-        ],
+        preview_image: "url('/templates_previews/professional.png')",
     },
     {
         id: "creative",
         name: "Creative (Purple Innovation)",
         description: "Vivid purple background, light text",
-        bg: "#7C3AED",
-        titleColor: "#F3F4F6",
-        textColor: "#F3F4F6",
-        sampleTitle: "Minimalist Slide",
-        sampleBullets: ["Simple idea", "Unique approach", "Creative outcome"],
+        preview_image: "url('/templates_previews/creative.png')",
     },
     {
         id: "light",
         name: "Cozy (Light Beige)",
         description: "Light background, black text",
-        bg: "#FFFFCC",
-        titleColor: "#000000",
-        textColor: "#000000",
-        sampleTitle: "Creative Slide",
-        sampleBullets: [
-            "Innovative idea",
-            "Strong arguments",
-            "Positive outcome",
-        ],
+        preview_image: "url('/templates_previews/cozy.png')",
     },
 ];
 
@@ -134,8 +86,8 @@ const Generate = ({ user }) => {
     const navigate = useNavigate();
 
     const [modalOpen, setModalOpen] = useState(false);
-    const [modalMessage, setModalMessage] = useState('');
-    const [modalType, setModalType] = useState('success');
+    const [modalMessage, setModalMessage] = useState("");
+    const [modalType, setModalType] = useState("success");
 
     const pickRandomTopic = useCallback(() => {
         const idx = Math.floor(Math.random() * TOPICS.length);
@@ -169,7 +121,7 @@ const Generate = ({ user }) => {
         e.preventDefault();
         setIsLoading(true);
         await getCsrfToken();
-        const xsrfToken = decodeURIComponent(getCookie('XSRF-TOKEN') || '');
+        const xsrfToken = decodeURIComponent(getCookie("XSRF-TOKEN") || "");
         try {
             const response = await fetch("/generate-presentation", {
                 method: "POST",
@@ -188,7 +140,12 @@ const Generate = ({ user }) => {
 
             if (!response.ok) {
                 const errorData = await response.json();
-                const errorMsg = errorData.message || errorData.error || (errorData.errors ? Object.values(errorData.errors).flat().join(' ') : "Server error");
+                const errorMsg =
+                    errorData.message ||
+                    errorData.error ||
+                    (errorData.errors
+                        ? Object.values(errorData.errors).flat().join(" ")
+                        : "Server error");
                 throw new Error(errorMsg);
             }
 
@@ -203,7 +160,7 @@ const Generate = ({ user }) => {
             console.error("Error:", error);
 
             setModalMessage(`Error: ${error.message}`);
-            setModalType('error');
+            setModalType("error");
             setModalOpen(true);
         } finally {
             setIsLoading(false);
@@ -357,30 +314,16 @@ const Generate = ({ user }) => {
                                             <div
                                                 className="flex flex-col justify-center items-center p-2.5 h-[90px]"
                                                 style={{
-                                                    background: t.bg,
+                                                    backgroundImage:
+                                                        t.preview_image,
+
+                                                    backgroundSize: "contain",
+                                                    backgroundRepeat:
+                                                        "no-repeat",
+                                                    backgroundPosition:
+                                                        "center",
                                                 }}
-                                            >
-                                                <div
-                                                    className="font-bold text-xs text-center whitespace-nowrap overflow-hidden text-ellipsis w-full"
-                                                    style={{
-                                                        color: t.titleColor,
-                                                    }}
-                                                >
-                                                    {t.sampleTitle}
-                                                </div>
-                                                <div
-                                                    className="text-[10px] mt-1.5 opacity-95 text-center"
-                                                    style={{
-                                                        color: t.textColor,
-                                                    }}
-                                                >
-                                                    <span className="line-clamp-2">
-                                                        {t.sampleBullets.join(
-                                                            " • "
-                                                        )}
-                                                    </span>
-                                                </div>
-                                            </div>
+                                            ></div>
                                             <div className="px-2 py-2 bg-white">
                                                 <div className="text-xs font-semibold text-gray-700 truncate">
                                                     {t.name}
