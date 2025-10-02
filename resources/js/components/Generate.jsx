@@ -81,6 +81,7 @@ const Generate = ({ user }) => {
     const [topic, setTopic] = useState("");
     const [slides, setSlides] = useState(5);
     const [template, setTemplate] = useState("default");
+    const [file, setFile] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
     const [isFormLoaded, setIsFormLoaded] = useState(false);
     const navigate = useNavigate();
@@ -88,6 +89,8 @@ const Generate = ({ user }) => {
     const [modalOpen, setModalOpen] = useState(false);
     const [modalMessage, setModalMessage] = useState("");
     const [modalType, setModalType] = useState("success");
+
+    const [isDragging, setIsDragging] = useState(false);
 
     const pickRandomTopic = useCallback(() => {
         const idx = Math.floor(Math.random() * TOPICS.length);
@@ -117,24 +120,87 @@ const Generate = ({ user }) => {
         setTopic(pickRandomTopic());
     }, [user, navigate, pickRandomTopic]);
 
+    const handleFileChange = (e) => {
+        const selectedFile = e.dataTransfer
+            ? e.dataTransfer.files[0]
+            : e.target.files[0];
+
+        const fileInput = document.getElementById("docx_file");
+        if (fileInput) {
+            fileInput.value = "";
+        }
+
+        if (!selectedFile) return;
+
+        if (
+            selectedFile.type !==
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        ) {
+            setFile(null);
+            setModalMessage("Please upload a valid .docx file.");
+            setModalType("error");
+            setModalOpen(true);
+            return;
+        }
+
+        if (selectedFile.size > 5 * 1024 * 1024) {
+            setFile(null);
+            setModalMessage("File size cannot exceed 5MB.");
+            setModalType("error");
+            setModalOpen(true);
+            return;
+        }
+
+        setFile(selectedFile);
+        setTopic("");
+    };
+
+    const handleDragEnter = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(true);
+    };
+
+    const handleDragLeave = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+    };
+
+    const handleDragOver = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+    };
+
+    const handleDrop = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+        handleFileChange(e);
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setIsLoading(true);
         await getCsrfToken();
         const xsrfToken = decodeURIComponent(getCookie("XSRF-TOKEN") || "");
+
+        const formData = new FormData();
+        formData.append("topic", topic);
+        formData.append("slides", Number(slides));
+        formData.append("template", template);
+        if (file) {
+            formData.append("docx_file", file);
+        }
+
         try {
             const response = await fetch("/generate-presentation", {
                 method: "POST",
                 headers: {
-                    "Content-Type": "application/json",
                     "X-XSRF-TOKEN": xsrfToken,
                     Accept: "application/json",
                 },
-                body: JSON.stringify({
-                    topic,
-                    slides: Number(slides),
-                    template,
-                }),
+                body: formData,
                 credentials: "include",
             });
 
@@ -158,7 +224,6 @@ const Generate = ({ user }) => {
             }
         } catch (error) {
             console.error("Error:", error);
-
             setModalMessage(`Error: ${error.message}`);
             setModalType("error");
             setModalOpen(true);
@@ -166,6 +231,7 @@ const Generate = ({ user }) => {
             setIsLoading(false);
         }
     };
+
     const handleCardKey = (e, templateId) => {
         if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
@@ -206,7 +272,7 @@ const Generate = ({ user }) => {
                             htmlFor="topic"
                             className="block text-sm font-semibold text-gray-700 mb-2"
                         >
-                            Topic
+                            Topic (or upload a .docx file below)
                         </label>
                         <div className="relative flex gap-2">
                             <div className="relative flex-1">
@@ -243,6 +309,96 @@ const Generate = ({ user }) => {
                     >
                         Shuffle
                     </button>
+
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Upload .docx File (Optional)
+                        </label>
+                        <label
+                            htmlFor="docx_file"
+                            onDragEnter={handleDragEnter}
+                            onDragLeave={handleDragLeave}
+                            onDragOver={handleDragOver}
+                            onDrop={handleDrop}
+                            className={`relative group flex flex-col justify-center items-center w-full h-48 rounded-lg border-2 border-dashed transition-all duration-300 ease-in-out cursor-pointer
+                            ${
+                                isDragging
+                                    ? "border-blue-500 bg-blue-50 scale-105"
+                                    : "border-gray-300 hover:border-blue-400"
+                            }
+                            ${file ? "border-green-500 bg-green-50" : ""}`}
+                        >
+                            <input
+                                id="docx_file"
+                                name="docx_file"
+                                type="file"
+                                className="hidden"
+                                onChange={handleFileChange}
+                                accept=".docx"
+                            />
+                            {file ? (
+                                <div className="text-center p-4 transition-opacity duration-300 opacity-100">
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        className="mx-auto h-12 w-12 text-green-500"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                        strokeWidth="1.5"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
+                                        />
+                                    </svg>
+                                    <p className="mt-2 text-sm font-semibold text-gray-800 break-all px-2">
+                                        {file.name}
+                                    </p>
+                                    <p className="text-xs text-gray-500">
+                                        {(file.size / 1024).toFixed(2)} KB
+                                    </p>
+                                    <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            setFile(null);
+                                        }}
+                                        className="mt-3 text-sm font-medium text-red-600 hover:text-red-700 transition-colors z-10"
+                                    >
+                                        Remove File
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="text-center transition-transform duration-300 group-hover:scale-105">
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        className="mx-auto h-12 w-12 text-gray-400 group-hover:text-blue-500 transition-colors"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                        strokeWidth="1"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                                        />
+                                    </svg>
+                                    <p className="mt-2 text-sm text-gray-600">
+                                        <span className="font-semibold text-blue-600">
+                                            Upload a file
+                                        </span>{" "}
+                                        or drag and drop
+                                    </p>
+                                    <p className="mt-1 text-xs text-gray-500">
+                                        DOCX up to 5MB
+                                    </p>
+                                </div>
+                            )}
+                        </label>
+                    </div>
 
                     <div>
                         <label

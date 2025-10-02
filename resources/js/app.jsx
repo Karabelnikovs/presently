@@ -8,6 +8,7 @@ import Profile from "./components/Profile";
 import Login from "./components/Login";
 import Register from "./components/Register";
 import { Navigate, Outlet } from "react-router-dom";
+import Welcome from "./components/Welcome";
 
 const ProtectedRoute = ({ user, redirectPath = "/login" }) => {
     if (!user) {
@@ -47,12 +48,30 @@ function App() {
                 ) : (
                     <Routes>
                         <Route element={<ProtectedRoute user={user} />}>
-                            <Route path="/generate" element={<Generate user={user} />} />
-                            <Route path="/my-presentations" element={<MyPresentations user={user} />} />
-                            <Route path="/profile" element={<Profile user={user} setUser={setUser} />} />
+                            <Route
+                                path="/generate"
+                                element={<Generate user={user} />}
+                            />
+                            <Route
+                                path="/my-presentations"
+                                element={<MyPresentations user={user} />}
+                            />
+                            <Route
+                                path="/profile"
+                                element={
+                                    <Profile user={user} setUser={setUser} />
+                                }
+                            />
                         </Route>
-                        <Route path="/login" element={<Login setUser={setUser} />} />
-                        <Route path="/register" element={<Register setUser={setUser} />} />
+                        <Route
+                            path="/login"
+                            element={<Login setUser={setUser} />}
+                        />
+                        <Route
+                            path="/register"
+                            element={<Register setUser={setUser} />}
+                        />
+                        <Route path="/" element={<Welcome />} />
                     </Routes>
                 )}
             </div>

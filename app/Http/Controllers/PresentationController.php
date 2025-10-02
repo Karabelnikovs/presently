@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use App\Models\Presentation;
+use PhpOffice\PhpWord\IOFactory;
 
 class PresentationController extends Controller
 {
@@ -18,12 +19,59 @@ class PresentationController extends Controller
 
     public function generate(Request $request)
     {
-        $useMockData = true;
+        $useMockData = false;
 
         try {
+            $request->validate([
+                'topic' => 'string|nullable',
+                'slides' => 'integer|min:1|max:20',
+                'template' => 'string|required',
+                'docx_file' => 'nullable|file|mimes:docx|max:5120',
+            ]);
+
             $topic = $request->input('topic', 'AI in Healthcare');
             $slideCount = (int) $request->input('slides', 5);
             $templateId = $request->input('template', 'default');
+
+            $documentContent = '';
+
+            if ($request->hasFile('docx_file')) {
+                $file = $request->file('docx_file');
+                $tempPath = $file->store('temp');
+
+                $fullPath = Storage::path($tempPath);
+
+                if (!file_exists($fullPath)) {
+                    Log::error("Uploaded file not found at: {$fullPath}");
+                    return response()->json(['error' => 'Uploaded file could not be processed.'], 500);
+                }
+
+                try {
+                    $phpWord = IOFactory::load($fullPath);
+                    $sections = $phpWord->getSections();
+                    foreach ($sections as $section) {
+                        $elements = $section->getElements();
+                        foreach ($elements as $element) {
+                            if (method_exists($element, 'getText')) {
+                                $documentContent .= $element->getText() . "\n";
+                            }
+                        }
+                    }
+
+                    $documentContent = $this->sanitizeText($documentContent);
+                } catch (\PhpOffice\PhpWord\Exception\Exception $e) {
+                    Log::error('Invalid DOCX file: ' . $e->getMessage() . ' Path: ' . $fullPath);
+                    return response()->json(['error' => 'The uploaded file is not a valid .docx document.'], 400);
+                } finally {
+                    Storage::delete($tempPath);
+                }
+
+                if (empty($topic)) {
+                    $topic = 'Presentation based on uploaded document';
+                }
+
+                Log::info('Extracted document content for LLM: ' . substr($documentContent, 0, 200) . '...');
+            }
 
             $templateFile = storage_path("app/templates/{$templateId}.potx");
             if (!file_exists($templateFile)) {
@@ -45,7 +93,14 @@ class PresentationController extends Controller
                 }';
                 $parsedData = json_decode($mockJson, true);
             } else {
-                $prompt = "Generate a detailed presentation outline for '$topic' with exactly $slideCount slides.
+                $basePrompt = "Generate a detailed presentation outline";
+                if ($documentContent) {
+                    $basePrompt .= " based on the following document content: \n\n" . $documentContent . "\n\n";
+                    $basePrompt .= "Summarize and structure the key points from the document into exactly $slideCount slides.";
+                } else {
+                    $basePrompt .= " for '$topic' with exactly $slideCount slides.";
+                }
+                $prompt = $basePrompt . "
                             For each slide, provide: a concise but engaging title, and 3-5 informative bullet points (use full sentences).
                             Ensure the output is complete and valid JSON.
                             Output ONLY the JSON object in this exact format: 
