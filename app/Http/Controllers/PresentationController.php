@@ -46,9 +46,10 @@ class PresentationController extends Controller
                 $parsedData = json_decode($mockJson, true);
             } else {
                 $prompt = "Generate a detailed presentation outline for '$topic' with exactly $slideCount slides.
-        For each slide, provide: a concise but engaging title, and 3-5 informative bullet points (use full sentences).
-        Ensure the output is complete and valid JSON.
-        Output ONLY the JSON object in this exact format: {\"slides\": [{\"title\": \"\", \"bullets\": [\"\"]}]}.";
+                            For each slide, provide: a concise but engaging title, and 3-5 informative bullet points (use full sentences).
+                            Ensure the output is complete and valid JSON.
+                            Output ONLY the JSON object in this exact format: 
+                        {\"slides\": [{\"title\": \"\", \"bullets\": [\"\"]}]}.";
 
                 $systemPrompt = "You are a JSON generator. Always output only valid JSON as specified in the prompt.";
 
