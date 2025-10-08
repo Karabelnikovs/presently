@@ -110,7 +110,7 @@ class PresentationController extends Controller
 
                 for ($try = 1; $try <= 3; $try++) {
                     $response = Http::timeout(240)->post('http://127.0.0.1:11434/api/generate', [
-                        'model' => 'llama3',
+                        'model' => 'llama3.1',
                         'prompt' => $prompt,
                         'system' => $systemPrompt,
                         'format' => 'json',
