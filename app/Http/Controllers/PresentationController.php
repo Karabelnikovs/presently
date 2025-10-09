@@ -20,6 +20,8 @@ class PresentationController extends Controller
     public function generate(Request $request)
     {
         $useMockData = false;
+        set_time_limit(300);
+        ini_set('max_execution_time', 300);
 
         try {
             $request->validate([
@@ -73,11 +75,15 @@ class PresentationController extends Controller
                 Log::info('Extracted document content for LLM: ' . substr($documentContent, 0, 200) . '...');
             }
 
-            $templateFile = storage_path("app/templates/{$templateId}.potx");
+            $templateDir = config('presentation.templates_dir', resource_path('templates'));
+            $templateFile = $templateDir . DIRECTORY_SEPARATOR . "{$templateId}.potx";
+
             if (!file_exists($templateFile)) {
                 Log::error("Template file not found: {$templateFile}");
                 return response()->json(['error' => "The selected design template '{$templateId}' is not available."], 400);
             }
+
+
             Log::info("Using template file: {$templateFile}");
 
             $parsedData = null;
@@ -108,15 +114,19 @@ class PresentationController extends Controller
 
                 $systemPrompt = "You are a JSON generator. Always output only valid JSON as specified in the prompt.";
 
+                Log::info('Sending prompt to LLM: ' . substr($prompt, 0, 200) . '...');
                 for ($try = 1; $try <= 3; $try++) {
+                    Log::info("LLM request attempt #{$try}");
                     $response = Http::timeout(240)->post('http://127.0.0.1:11434/api/generate', [
-                        'model' => 'llama3.1',
+                        'model' => 'llama3.1:8b',
                         'prompt' => $prompt,
                         'system' => $systemPrompt,
                         'format' => 'json',
                         'stream' => false,
                     ]);
 
+                    Log::info("LLM response status: " . $response->status());
+                    Log::info("LLM response body: " . substr($response->body(), 0, 500) . '...');
                     if ($response->successful()) {
                         $ollamaData = json_decode($response->body(), true);
                         $llmOutput = $ollamaData['response'] ?? '';
@@ -125,10 +135,12 @@ class PresentationController extends Controller
                             break;
                     }
 
+
                     $parsedData = null;
                 }
             }
 
+            Log::info('Parsed data from LLM: ' . substr(json_encode($parsedData), 0, 500) . '...');
             if (!isset($parsedData['slides']) || !is_array($parsedData['slides'])) {
                 Log::error('Could not obtain slides data from LLM after retries or from mock data.');
                 return response()->json(['error' => 'Could not obtain valid slides data.'], 500);
@@ -149,8 +161,10 @@ class PresentationController extends Controller
             $filePath = storage_path('app/public/presentation_' . time() . '.pptx');
 
             $pythonScript = base_path('scripts/generate_presentation.py');
-            $command = escapeshellcmd('python ' . $pythonScript . ' ' . escapeshellarg($templateFile) . ' ' . escapeshellarg($filePath) . ' ' . escapeshellarg($dataPath));
+            Log::info("Executing Python script: {$pythonScript} with template: {$templateFile} and data: {$dataPath}");
+            $command = escapeshellcmd('python3 ' . $pythonScript . ' ' . escapeshellarg($templateFile) . ' ' . escapeshellarg($filePath) . ' ' . escapeshellarg($dataPath));
             $output = shell_exec($command . ' 2>&1');
+            Log::info("Python script output: " . substr($output, 0, 500) . '...');
 
             unlink($dataPath);
 
