@@ -44,25 +44,32 @@ class PresentationController extends Controller
                 $fullPath = Storage::path($tempPath);
 
                 if (!file_exists($fullPath)) {
-                    Log::error("Uploaded file not found at: {$fullPath}");
+                    // Log::error("Uploaded file not found at: {$fullPath}");
                     return response()->json(['error' => 'Uploaded file could not be processed.'], 500);
                 }
 
                 try {
                     $phpWord = IOFactory::load($fullPath);
                     $sections = $phpWord->getSections();
+                    $documentContent = '';
+
                     foreach ($sections as $section) {
                         $elements = $section->getElements();
                         foreach ($elements as $element) {
                             if (method_exists($element, 'getText')) {
-                                $documentContent .= $element->getText() . "\n";
+                                $text = $element->getText();
+                                if (is_array($text)) {
+                                    $text = implode(' ', $text);
+                                }
+                                $documentContent .= $text . "\n";
                             }
                         }
                     }
 
+
                     $documentContent = $this->sanitizeText($documentContent);
                 } catch (\PhpOffice\PhpWord\Exception\Exception $e) {
-                    Log::error('Invalid DOCX file: ' . $e->getMessage() . ' Path: ' . $fullPath);
+                    // Log::error('Invalid DOCX file: ' . $e->getMessage() . ' Path: ' . $fullPath);
                     return response()->json(['error' => 'The uploaded file is not a valid .docx document.'], 400);
                 } finally {
                     Storage::delete($tempPath);
@@ -72,24 +79,24 @@ class PresentationController extends Controller
                     $topic = 'Presentation based on uploaded document';
                 }
 
-                Log::info('Extracted document content for LLM: ' . substr($documentContent, 0, 200) . '...');
+                // Log::info('Extracted document content for LLM: ' . substr($documentContent, 0, 200) . '...');
             }
 
             $templateDir = config('presentation.templates_dir', resource_path('templates'));
             $templateFile = $templateDir . DIRECTORY_SEPARATOR . "{$templateId}.potx";
 
             if (!file_exists($templateFile)) {
-                Log::error("Template file not found: {$templateFile}");
+                // Log::error("Template file not found: {$templateFile}");
                 return response()->json(['error' => "The selected design template '{$templateId}' is not available."], 400);
             }
 
 
-            Log::info("Using template file: {$templateFile}");
+            // Log::info("Using template file: {$templateFile}");
 
             $parsedData = null;
 
             if ($useMockData) {
-                Log::info('Using mock data for presentation generation.');
+                // Log::info('Using mock data for presentation generation.');
                 $mockJson = '{
                     "slides": [
                         { "title": "The Dawn of a New Era", "bullets": ["Artificial Intelligence is revolutionizing the healthcare industry.", "From diagnostics to treatment, AI is enhancing capabilities.", "This presentation will explore the key impacts of AI in modern medicine."]},
@@ -114,9 +121,9 @@ class PresentationController extends Controller
 
                 $systemPrompt = "You are a JSON generator. Always output only valid JSON as specified in the prompt.";
 
-                Log::info('Sending prompt to LLM: ' . substr($prompt, 0, 200) . '...');
+                // Log::info('Sending prompt to LLM: ' . substr($prompt, 0, 200) . '...');
                 for ($try = 1; $try <= 3; $try++) {
-                    Log::info("LLM request attempt #{$try}");
+                    // Log::info("LLM request attempt #{$try}");
                     $response = Http::timeout(240)->post('http://127.0.0.1:11434/api/generate', [
                         'model' => 'llama3.1:8b',
                         'prompt' => $prompt,
@@ -125,8 +132,8 @@ class PresentationController extends Controller
                         'stream' => false,
                     ]);
 
-                    Log::info("LLM response status: " . $response->status());
-                    Log::info("LLM response body: " . substr($response->body(), 0, 500) . '...');
+                    // Log::info("LLM response status: " . $response->status());
+                    // Log::info("LLM response body: " . substr($response->body(), 0, 500) . '...');
                     if ($response->successful()) {
                         $ollamaData = json_decode($response->body(), true);
                         $llmOutput = $ollamaData['response'] ?? '';
@@ -140,10 +147,14 @@ class PresentationController extends Controller
                 }
             }
 
-            Log::info('Parsed data from LLM: ' . substr(json_encode($parsedData), 0, 500) . '...');
+            // Log::info('Parsed data from LLM: ' . substr(json_encode($parsedData), 0, 500) . '...');
             if (!isset($parsedData['slides']) || !is_array($parsedData['slides'])) {
-                Log::error('Could not obtain slides data from LLM after retries or from mock data.');
+                // Log::error('Could not obtain slides data from LLM after retries or from mock data.');
                 return response()->json(['error' => 'Could not obtain valid slides data.'], 500);
+            }
+
+            if (isset($parsedData['slides'][0])) {
+                $parsedData['slides'][0]['title'] = $topic;
             }
 
             $data = [
@@ -161,15 +172,15 @@ class PresentationController extends Controller
             $filePath = storage_path('app/public/presentation_' . time() . '.pptx');
 
             $pythonScript = base_path('scripts/generate_presentation.py');
-            Log::info("Executing Python script: {$pythonScript} with template: {$templateFile} and data: {$dataPath}");
+            // Log::info("Executing Python script: {$pythonScript} with template: {$templateFile} and data: {$dataPath}");
             $command = escapeshellcmd('python3 ' . $pythonScript . ' ' . escapeshellarg($templateFile) . ' ' . escapeshellarg($filePath) . ' ' . escapeshellarg($dataPath));
             $output = shell_exec($command . ' 2>&1');
-            Log::info("Python script output: " . substr($output, 0, 500) . '...');
+            // Log::info("Python script output: " . substr($output, 0, 500) . '...');
 
             unlink($dataPath);
 
             if (!file_exists($filePath)) {
-                Log::error('Python script failed to generate PPTX: ' . $output);
+                // Log::error('Python script failed to generate PPTX: ' . $output);
                 return response()->json(['error' => 'Failed to generate presentation via Python: ' . $output], 500);
             }
 
@@ -182,7 +193,7 @@ class PresentationController extends Controller
             return response()->json(['message' => 'Presentation generated successfully', 'file' => basename($filePath)]);
 
         } catch (\Throwable $ex) {
-            Log::error('Unhandled exception in generate(): ' . $ex->getMessage() . "\n" . $ex->getTraceAsString());
+            // Log::error('Unhandled exception in generate(): ' . $ex->getMessage() . "\n" . $ex->getTraceAsString());
             return response()->json(['error' => 'Server error: ' . $ex->getMessage()], 500);
         }
     }
@@ -204,7 +215,7 @@ class PresentationController extends Controller
         $safeFilename = basename($filename);
         $path = storage_path('app/public/' . $safeFilename);
         if (!file_exists($path)) {
-            \Log::error("Presentation not found for download: {$path}");
+            // Log::error("Presentation not found for download: {$path}");
             abort(404);
         }
         while (ob_get_level() > 0) {
