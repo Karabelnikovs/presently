@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { getCsrfToken, getCookie } from '../utils/csrf';
-import Alert from './Alert';
+import { getCsrfToken, getCookie } from "../utils/csrf";
+import Alert from "./Alert";
 
 const Login = ({ setUser }) => {
     const [modalOpen, setModalOpen] = useState(false);
-    const [modalMessage, setModalMessage] = useState('');
-    const [modalType, setModalType] = useState('success');
+    const [modalMessage, setModalMessage] = useState("");
+    const [modalType, setModalType] = useState("success");
 
     const [loaded, setLoaded] = useState(false);
     useEffect(() => {
@@ -18,7 +18,7 @@ const Login = ({ setUser }) => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         await getCsrfToken();
-        const xsrfToken = decodeURIComponent(getCookie('XSRF-TOKEN') || '');
+        const xsrfToken = decodeURIComponent(getCookie("XSRF-TOKEN") || "");
         const res = await fetch("/login", {
             method: "POST",
             headers: {
@@ -32,7 +32,7 @@ const Login = ({ setUser }) => {
         if (!res.ok) {
             const data = await res.json();
             setModalMessage(data.message || "Login failed");
-            setModalType('error');
+            setModalType("error");
             setModalOpen(true);
 
             return;
@@ -62,6 +62,7 @@ const Login = ({ setUser }) => {
                     <input
                         type="email"
                         id="email"
+                        name="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required
@@ -78,6 +79,7 @@ const Login = ({ setUser }) => {
                     <input
                         type="password"
                         id="password"
+                        name="password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required

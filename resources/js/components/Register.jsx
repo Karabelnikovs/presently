@@ -1,14 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { getCsrfToken, getCookie } from '../utils/csrf';
-import Alert from './Alert';
+import { getCsrfToken, getCookie } from "../utils/csrf";
+import Alert from "./Alert";
 
 const Register = ({ setUser }) => {
-
     const [modalOpen, setModalOpen] = useState(false);
-    const [modalMessage, setModalMessage] = useState('');
-    const [modalType, setModalType] = useState('success');
-
+    const [modalMessage, setModalMessage] = useState("");
+    const [modalType, setModalType] = useState("success");
 
     const [loaded, setLoaded] = useState(false);
     useEffect(() => {
@@ -22,7 +20,7 @@ const Register = ({ setUser }) => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         await getCsrfToken();
-        const xsrfToken = decodeURIComponent(getCookie('XSRF-TOKEN') || '');
+        const xsrfToken = decodeURIComponent(getCookie("XSRF-TOKEN") || "");
         const res = await fetch("/register", {
             method: "POST",
             headers: {
@@ -41,7 +39,7 @@ const Register = ({ setUser }) => {
         if (!res.ok) {
             const data = await res.json();
             setModalMessage(data.message || "Registration failed");
-            setModalType('error');
+            setModalType("error");
             setModalOpen(true);
 
             return;
@@ -71,6 +69,7 @@ const Register = ({ setUser }) => {
                     <input
                         type="text"
                         id="name"
+                        name="name"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         required
@@ -87,6 +86,7 @@ const Register = ({ setUser }) => {
                     <input
                         type="email"
                         id="email"
+                        name="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required
@@ -103,6 +103,7 @@ const Register = ({ setUser }) => {
                     <input
                         type="password"
                         id="password"
+                        name="password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required
@@ -119,6 +120,7 @@ const Register = ({ setUser }) => {
                     <input
                         type="password"
                         id="password_confirmation"
+                        name="password_confirmation"
                         value={passwordConfirmation}
                         onChange={(e) =>
                             setPasswordConfirmation(e.target.value)
