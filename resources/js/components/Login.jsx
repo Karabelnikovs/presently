@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { getCsrfToken, getCookie } from "../utils/csrf";
 import Alert from "./Alert";
+import { Mail, Key } from "lucide-react";
 
 const Login = ({ setUser }) => {
     const [modalOpen, setModalOpen] = useState(false);
@@ -12,6 +13,8 @@ const Login = ({ setUser }) => {
     useEffect(() => {
         setTimeout(() => setLoaded(true), 100);
     }, []);
+    const [emailFocused, setEmailFocused] = useState(false);
+    const [passwordFocused, setPasswordFocused] = useState(false);
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const navigate = useNavigate();
@@ -59,15 +62,37 @@ const Login = ({ setUser }) => {
                     >
                         Email
                     </label>
-                    <input
-                        type="email"
-                        id="email"
-                        name="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                        className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                    />
+                    <div
+                        className={`relative flex-1 focus:ring-0 transition-all duration-300  ${
+                            emailFocused ? "transform scale-[1.02]" : ""
+                        }`}
+                    >
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <Mail
+                                className={`absolute left-4 transition-all duration-300 ${
+                                    emailFocused
+                                        ? "text-blue-600"
+                                        : "text-gray-400"
+                                }`}
+                                size={20}
+                            />
+                        </div>
+                        <input
+                            type="email"
+                            id="email"
+                            name="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            required
+                            onFocus={() => setEmailFocused(true)}
+                            onBlur={() => setEmailFocused(false)}
+                            className={`w-full pl-12 pr-4 py-3 rounded-xl border-2 transition-all duration-300 outline-none ${
+                                emailFocused
+                                    ? "border-blue-600 shadow-lg shadow-blue-100"
+                                    : "border-gray-200 shadow-sm"
+                            } `}
+                        />
+                    </div>
                 </div>
                 <div>
                     <label
@@ -76,19 +101,41 @@ const Login = ({ setUser }) => {
                     >
                         Password
                     </label>
-                    <input
-                        type="password"
-                        id="password"
-                        name="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                        className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                    />
+                    <div
+                        className={`relative flex-1 focus:ring-0 transition-all duration-300  ${
+                            passwordFocused ? "transform scale-[1.02]" : ""
+                        }`}
+                    >
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <Key
+                                className={`absolute left-4 transition-all duration-300 ${
+                                    passwordFocused
+                                        ? "text-blue-600"
+                                        : "text-gray-400"
+                                }`}
+                                size={20}
+                            />
+                        </div>
+                        <input
+                            type="password"
+                            id="password"
+                            name="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                            onFocus={() => setPasswordFocused(true)}
+                            onBlur={() => setPasswordFocused(false)}
+                            className={`w-full pl-12 pr-4 py-3 rounded-xl border-2 transition-all duration-300 outline-none ${
+                                passwordFocused
+                                    ? "border-blue-600 shadow-lg shadow-blue-100"
+                                    : "border-gray-200 shadow-sm"
+                            } `}
+                        />
+                    </div>
                 </div>
                 <button
                     type="submit"
-                    className="w-full bg-blue-600 text-white font-semibold rounded-md px-5 py-2 transition transform duration-150 ease-out active:scale-95"
+                    className="w-full bg-blue-600 text-white font-semibold rounded-xl px-5 py-2 transition transform duration-150 ease-out active:scale-95 shadow-md shadow-blue-200 hover:shadow-lg"
                 >
                     Login
                 </button>

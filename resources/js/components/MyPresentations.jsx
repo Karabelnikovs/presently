@@ -118,6 +118,8 @@ const MyPresentations = ({ user }) => {
                         size={20}
                     />
                     <input
+                        id="search"
+                        name="search"
                         type="text"
                         placeholder="Search presentations..."
                         value={searchQuery}
@@ -184,6 +186,7 @@ const MyPresentations = ({ user }) => {
                                     handlePageChange(currentPage - 1)
                                 }
                                 disabled={currentPage === 1}
+                                name="previous"
                                 className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 hover:shadow-sm"
                             >
                                 <ChevronLeft size={20} />
@@ -217,6 +220,7 @@ const MyPresentations = ({ user }) => {
                                     handlePageChange(currentPage + 1)
                                 }
                                 disabled={currentPage === totalPages}
+                                name="next"
                                 className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 hover:shadow-sm"
                             >
                                 <ChevronRight size={20} />

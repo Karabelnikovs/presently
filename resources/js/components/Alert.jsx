@@ -36,7 +36,6 @@ const Alert = ({ isOpen, onClose, message, type = "success" }) => {
             }`}
             aria-hidden={!visible}
         >
-
             <div
                 className={`absolute inset-0 bg-linear-to-br from-[#f9fafb] to-[#dbeafe] bg-opacity-40 transition-opacity duration-600 ${
                     visible ? "opacity-100" : "opacity-0"
@@ -48,7 +47,9 @@ const Alert = ({ isOpen, onClose, message, type = "success" }) => {
                 role="dialog"
                 aria-modal="true"
                 className={`relative max-w-lg w-full bg-white rounded-2xl shadow-xl p-8 space-y-8 transition-all duration-600 ease-out ${
-                    visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5"
+                    visible
+                        ? "opacity-100 translate-y-0"
+                        : "opacity-0 translate-y-5"
                 }`}
             >
                 <div className="flex items-center justify-center mb-4">
@@ -59,12 +60,14 @@ const Alert = ({ isOpen, onClose, message, type = "success" }) => {
                     </div>
                 </div>
 
-                <p className="text-center text-gray-800 font-medium mb-4">{message}</p>
+                <p className="text-center text-gray-800 font-medium mb-4">
+                    {message}
+                </p>
 
                 <div className="flex justify-center">
                     <button
                         onClick={() => onClose()}
-                        className="w-full bg-blue-600 text-white font-semibold rounded-md px-5 py-2 transition transform duration-150 ease-out active:scale-95"
+                        className="w-full bg-blue-600 text-white font-semibold rounded-xl px-5 py-2 transition transform duration-150 ease-out active:scale-95"
                     >
                         Close
                     </button>

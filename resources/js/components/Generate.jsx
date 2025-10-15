@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { getCsrfToken, getCookie } from "../utils/csrf";
 import Alert from "./Alert";
+import MiniLoaderMemo from "./MiniLoaderMemo";
+import { Search, Presentation } from "lucide-react";
 
 const TOPICS = [
     "Let AI do the heavy lifting for you.",
@@ -91,6 +93,8 @@ const Generate = ({ user }) => {
     const [modalType, setModalType] = useState("success");
 
     const [isDragging, setIsDragging] = useState(false);
+    const [topicFocused, setTopicFocused] = useState(false);
+    const [countFocused, setCountFocused] = useState(false);
 
     const pickRandomTopic = useCallback(() => {
         const idx = Math.floor(Math.random() * TOPICS.length);
@@ -241,14 +245,18 @@ const Generate = ({ user }) => {
 
     return (
         <>
-            {isLoading && (
+            {/* {isLoading && (
                 <div className="fixed top-0 left-0 w-full h-full bg-white bg-opacity-80 flex flex-col items-center justify-center z-50 p-4 text-center">
                     <div className="border-4 border-gray-200 border-t-blue-500 rounded-full w-10 h-10 animate-spin mb-4"></div>
                     <p className="text-lg font-semibold text-gray-800">
                         Generating your presentation... This may take a moment.
                     </p>
                 </div>
-            )}
+            )} */}
+            <MiniLoaderMemo
+                isLoading={isLoading}
+                onFinish={() => setIsLoading(false)}
+            />
 
             <div
                 className={`max-w-4xl w-full bg-white rounded-2xl shadow-xl p-4 sm:p-6 md:p-8 space-y-8 transition-all duration-600 ease-out ${
@@ -275,28 +283,35 @@ const Generate = ({ user }) => {
                             Topic (or upload a .docx file below)
                         </label>
                         <div className="relative flex gap-2">
-                            <div className="relative flex-1">
+                            <div
+                                className={`relative flex-1 focus:ring-0 transition-all duration-300  ${
+                                    topicFocused ? "transform scale-[1.02]" : ""
+                                }`}
+                            >
                                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <svg
-                                        className="h-5 w-5 text-gray-400"
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        viewBox="0 0 20 20"
-                                        fill="currentColor"
-                                    >
-                                        <path
-                                            fillRule="evenodd"
-                                            d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
-                                            clipRule="evenodd"
-                                        />
-                                    </svg>
+                                    <Search
+                                        className={`absolute left-4 transition-all duration-300 ${
+                                            topicFocused
+                                                ? "text-blue-600"
+                                                : "text-gray-400"
+                                        }`}
+                                        size={20}
+                                    />
                                 </div>
                                 <input
                                     type="text"
                                     id="topic"
+                                    name="topic"
                                     value={topic}
                                     onChange={(e) => setTopic(e.target.value)}
                                     required
-                                    className="block w-full pl-10 pr-3 py-3 text-gray-900 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out"
+                                    onFocus={() => setTopicFocused(true)}
+                                    onBlur={() => setTopicFocused(false)}
+                                    className={`w-full pl-12 pr-4 py-3 rounded-xl border-2 transition-all duration-300 outline-none ${
+                                        topicFocused
+                                            ? "border-blue-600 shadow-lg shadow-blue-100"
+                                            : "border-gray-200 shadow-sm"
+                                    } `}
                                 />
                             </div>
                         </div>
@@ -305,7 +320,7 @@ const Generate = ({ user }) => {
                         type="button"
                         onClick={() => setTopic(pickRandomTopic())}
                         title="Randomize topic"
-                        className="inline-flex items-center justify-center px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 hover:bg-gray-100 text-sm w-full"
+                        className="inline-flex items-center justify-center px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 hover:bg-gray-100 text-sm w-full  transition transform duration-150 ease-out active:scale-95 active:shadow-lg"
                     >
                         Shuffle
                     </button>
@@ -407,21 +422,25 @@ const Generate = ({ user }) => {
                         >
                             Number of Slides
                         </label>
-                        <div className="relative">
+                        <div
+                            className={`relative focus:ring-0 transition-all duration-300  ${
+                                countFocused ? "transform scale-[1.02]" : ""
+                            }`}
+                        >
                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <svg
-                                    className="h-5 w-5 text-gray-400"
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    viewBox="0 0 20 20"
-                                    fill="currentColor"
-                                >
-                                    <path d="M7 3.5A1.5 1.5 0 018.5 2h3A1.5 1.5 0 0113 3.5v1.586l1.293 1.293a1 1 0 01.293.707V16.5a1.5 1.5 0 01-1.5 1.5h-8A1.5 1.5 0 012 16.5V7.086a1 1 0 01.293-.707L3.586 5.086V3.5A1.5 1.5 0 015 2h1.5a.5.5 0 01.5.5v1.5H10V2.5a.5.5 0 01.5-.5H12a1.5 1.5 0 011.5 1.5v1.586l1.293 1.293a1 1 0 01.293.707V16.5a1.5 1.5 0 01-1.5 1.5h-8A1.5 1.5 0 012 16.5V7.086a1 1 0 01.293-.707L3.586 5.086V3.5z" />
-                                    <path d="M7.5 8a2.5 2.5 0 100 5 2.5 2.5 0 000-5z" />
-                                </svg>
+                                <Presentation
+                                    className={`absolute left-4 transition-all duration-300 ${
+                                        countFocused
+                                            ? "text-blue-600"
+                                            : "text-gray-400"
+                                    }`}
+                                    size={20}
+                                />
                             </div>
                             <input
                                 type="number"
                                 id="slides"
+                                name="slides"
                                 value={slides}
                                 onChange={(e) => {
                                     const val = Number(e.target.value);
@@ -431,7 +450,13 @@ const Generate = ({ user }) => {
                                 min="1"
                                 max="20"
                                 required
-                                className="block w-full pl-10 pr-3 py-3 text-gray-900 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out"
+                                onFocus={() => setCountFocused(true)}
+                                onBlur={() => setCountFocused(false)}
+                                className={`w-full pl-12 pr-4 py-3 rounded-xl border-2 transition-all duration-300 outline-none ${
+                                    countFocused
+                                        ? "border-blue-600 shadow-lg shadow-blue-100"
+                                        : "border-gray-200 shadow-sm"
+                                } `}
                             />
                         </div>
                     </div>
@@ -497,7 +522,7 @@ const Generate = ({ user }) => {
 
                     <button
                         type="submit"
-                        className="w-full text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-blue-300 font-semibold rounded-lg text-md px-5 py-3.5 text-center transition-transform transform duration-150 ease-in-out active:scale-95"
+                        className="w-full bg-blue-600 text-white font-semibold rounded-xl px-5 py-2 transition transform duration-150 ease-out active:scale-95 shadow-md shadow-blue-200 hover:shadow-lg"
                     >
                         Generate Presentation
                     </button>

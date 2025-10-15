@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { getCsrfToken, getCookie } from '../utils/csrf';
-import Alert from './Alert';
+import { getCsrfToken, getCookie } from "../utils/csrf";
+import Alert from "./Alert";
+import { CircleUser, Mail, Key, RotateCcwKey } from "lucide-react";
 
 const Profile = ({ user, setUser }) => {
     console.log(user);
@@ -16,8 +17,13 @@ const Profile = ({ user, setUser }) => {
     const navigate = useNavigate();
 
     const [modalOpen, setModalOpen] = useState(false);
-    const [modalMessage, setModalMessage] = useState('');
-    const [modalType, setModalType] = useState('success');
+    const [modalMessage, setModalMessage] = useState("");
+    const [modalType, setModalType] = useState("success");
+
+    const [nameFocused, setNameFocused] = useState(false);
+    const [emailFocused, setEmailFocused] = useState(false);
+    const [pswrdFocused, setPswrdFocused] = useState(false);
+    const [pswrdConfFocused, sePswrdConfFocused] = useState(false);
 
     useEffect(() => {
         const hasUser =
@@ -52,7 +58,7 @@ const Profile = ({ user, setUser }) => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         await getCsrfToken();
-        const xsrfToken = decodeURIComponent(getCookie('XSRF-TOKEN') || '');
+        const xsrfToken = decodeURIComponent(getCookie("XSRF-TOKEN") || "");
 
         const body = { name, email };
         if (password) {
@@ -72,7 +78,7 @@ const Profile = ({ user, setUser }) => {
         if (!res.ok) {
             const data = await res.json();
             setModalMessage(data.message || "Update failed");
-            setModalType('error');
+            setModalType("error");
             setModalOpen(true);
             return;
         }
@@ -80,7 +86,7 @@ const Profile = ({ user, setUser }) => {
         await getCsrfToken();
 
         setModalMessage("Profile updated");
-        setModalType('success');
+        setModalType("success");
         setModalOpen(true);
     };
 
@@ -101,14 +107,36 @@ const Profile = ({ user, setUser }) => {
                     >
                         Name
                     </label>
-                    <input
-                        type="text"
-                        id="name"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        required
-                        className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                    />
+                    <div
+                        className={`relative flex-1 focus:ring-0 transition-all duration-300  ${
+                            nameFocused ? "transform scale-[1.02]" : ""
+                        }`}
+                    >
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <CircleUser
+                                className={`absolute left-4 transition-all duration-300 ${
+                                    nameFocused
+                                        ? "text-blue-600"
+                                        : "text-gray-400"
+                                }`}
+                                size={20}
+                            />
+                        </div>
+                        <input
+                            type="text"
+                            id="name"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            required
+                            onFocus={() => setNameFocused(true)}
+                            onBlur={() => setNameFocused(false)}
+                            className={`w-full pl-12 pr-4 py-3 rounded-xl border-2 transition-all duration-300 outline-none ${
+                                nameFocused
+                                    ? "border-blue-600 shadow-lg shadow-blue-100"
+                                    : "border-gray-200 shadow-sm"
+                            } `}
+                        />
+                    </div>
                 </div>
                 <div>
                     <label
@@ -117,14 +145,36 @@ const Profile = ({ user, setUser }) => {
                     >
                         Email
                     </label>
-                    <input
-                        type="email"
-                        id="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                        className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                    />
+                    <div
+                        className={`relative flex-1 focus:ring-0 transition-all duration-300  ${
+                            emailFocused ? "transform scale-[1.02]" : ""
+                        }`}
+                    >
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <Mail
+                                className={`absolute left-4 transition-all duration-300 ${
+                                    emailFocused
+                                        ? "text-blue-600"
+                                        : "text-gray-400"
+                                }`}
+                                size={20}
+                            />
+                        </div>
+                        <input
+                            type="email"
+                            id="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            required
+                            onFocus={() => setEmailFocused(true)}
+                            onBlur={() => setEmailFocused(false)}
+                            className={`w-full pl-12 pr-4 py-3 rounded-xl border-2 transition-all duration-300 outline-none ${
+                                emailFocused
+                                    ? "border-blue-600 shadow-lg shadow-blue-100"
+                                    : "border-gray-200 shadow-sm"
+                            } `}
+                        />
+                    </div>
                 </div>
                 <div>
                     <label
@@ -133,13 +183,35 @@ const Profile = ({ user, setUser }) => {
                     >
                         New Password (leave blank to keep current)
                     </label>
-                    <input
-                        type="password"
-                        id="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                    />
+                    <div
+                        className={`relative flex-1 focus:ring-0 transition-all duration-300  ${
+                            pswrdFocused ? "transform scale-[1.02]" : ""
+                        }`}
+                    >
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <Key
+                                className={`absolute left-4 transition-all duration-300 ${
+                                    pswrdFocused
+                                        ? "text-blue-600"
+                                        : "text-gray-400"
+                                }`}
+                                size={20}
+                            />
+                        </div>
+                        <input
+                            type="password"
+                            id="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            onFocus={() => setPswrdFocused(true)}
+                            onBlur={() => setPswrdFocused(false)}
+                            className={`w-full pl-12 pr-4 py-3 rounded-xl border-2 transition-all duration-300 outline-none ${
+                                pswrdFocused
+                                    ? "border-blue-600 shadow-lg shadow-blue-100"
+                                    : "border-gray-200 shadow-sm"
+                            } `}
+                        />
+                    </div>
                 </div>
                 <div>
                     <label
@@ -148,19 +220,41 @@ const Profile = ({ user, setUser }) => {
                     >
                         Confirm New Password
                     </label>
-                    <input
-                        type="password"
-                        id="password_confirmation"
-                        value={passwordConfirmation}
-                        onChange={(e) =>
-                            setPasswordConfirmation(e.target.value)
-                        }
-                        className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                    />
+                    <div
+                        className={`relative flex-1 focus:ring-0 transition-all duration-300  ${
+                            pswrdConfFocused ? "transform scale-[1.02]" : ""
+                        }`}
+                    >
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <RotateCcwKey
+                                className={`absolute left-4 transition-all duration-300 ${
+                                    pswrdConfFocused
+                                        ? "text-blue-600"
+                                        : "text-gray-400"
+                                }`}
+                                size={20}
+                            />
+                        </div>
+                        <input
+                            type="password"
+                            id="password_confirmation"
+                            value={passwordConfirmation}
+                            onChange={(e) =>
+                                setPasswordConfirmation(e.target.value)
+                            }
+                            onFocus={() => sePswrdConfFocused(true)}
+                            onBlur={() => sePswrdConfFocused(false)}
+                            className={`w-full pl-12 pr-4 py-3 rounded-xl border-2 transition-all duration-300 outline-none ${
+                                pswrdConfFocused
+                                    ? "border-blue-600 shadow-lg shadow-blue-100"
+                                    : "border-gray-200 shadow-sm"
+                            } `}
+                        />
+                    </div>
                 </div>
                 <button
                     type="submit"
-                    className="w-full bg-blue-600 text-white font-semibold rounded-md px-5 py-2 transition transform duration-150 ease-out active:scale-95"
+                    className="w-full bg-blue-600 text-white font-semibold rounded-xl px-5 py-2 transition transform duration-150 ease-out active:scale-95 shadow-md shadow-blue-200 hover:shadow-lg"
                 >
                     Update Profile
                 </button>
