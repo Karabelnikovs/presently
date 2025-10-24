@@ -13,14 +13,16 @@ import shutil
 import urllib.parse
 import time
 
+# Pārrakstām PPTX atpazīšanas loģiku, lai apstrādātu arī dažus citus content_type
 def new_is_pptx_package(presentation_part):
     return presentation_part.content_type in (
         "application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml",
         "application/vnd.openxmlformats-officedocument.presentationml.template.main+xml",
     )
+
 pptx.api._is_pptx_package = new_is_pptx_package
 
-# Command-line args: template_path output_path data_path [unsplash_access_key]
+# Komandrindas parametri: template_path output_path data_path [unsplash_access_key]
 if len(sys.argv) not in (4, 5):
     print("Usage: python generate_presentation.py <template_path> <output_path> <data_path> [unsplash_access_key]")
     sys.exit(1)
@@ -30,18 +32,22 @@ output_path = sys.argv[2]
 data_path = sys.argv[3]
 unsplash_key = None
 if len(sys.argv) == 5:
-    unsplash_key = sys.argv[4] if sys.argv[4] else None
+    unsplash_key = sys.argv[4]
+    if sys.argv[4] else None
 
+# Ja atslēga nav norādīta komandrindā, mēģinām to ņemt no vides mainīgā
 if not unsplash_key:
     unsplash_key = os.environ.get('UNSPLASH_ACCESS_KEY')
 
-# Load data
+# Iegūstam ievaddatus (JSON), kuros jābūt slides sarakstam vai 'topic'
 with open(data_path, 'r') as f:
     data = json.load(f)
 
 slides_data = data.get('slides', [])
 
-# Helper: download image from Unsplash 
+
+# Helper funkcija: lejupielādē attēlu pēc meklējuma virsraksta
+# Atgriež ceļu uz pagaidu failu vai None, ja neizdodas
 def download_image_for_query(query, size=(1600, 900)):
     """Return local file path to downloaded image or None on failure."""
     safe_query = query.strip()
@@ -50,6 +56,7 @@ def download_image_for_query(query, size=(1600, 900)):
 
     try:
         if unsplash_key:
+            # Ja ir OAuth atslēga, izmanto oficiālo API meklēšanu (precīzāka)
             search_url = 'https://api.unsplash.com/search/photos'
             params = {
                 'query': safe_query,
@@ -69,13 +76,14 @@ def download_image_for_query(query, size=(1600, 900)):
             else:
                 img_url = None
         else:
+            # Ja nav atslēgas, izmanto public 'source.unsplash.com' ar query paramiem
             q = urllib.parse.quote_plus(safe_query)
             img_url = f'https://source.unsplash.com/{size[0]}x{size[1]}/?{q}'
 
         if not img_url:
             return None
 
-        # Download image (follow redirects)
+        # Lejupielāde ar timeout un stream, saglabājam pagaidu JPG failā
         r = requests.get(img_url, stream=True, timeout=30)
         r.raise_for_status()
 
@@ -87,13 +95,15 @@ def download_image_for_query(query, size=(1600, 900)):
 
         return tmp_path
     except Exception as e:
-        # Failure: log to stdout (script is called from PHP; PHP logs will capture stdout/stderr)
+        # Brīdinājums izdrukā uz stdout/stderr — noder, ja skriptu izsauc PHP
         print(f"[WARN] Image download failed for query '{query}': {e}")
         return None
 
+
+# Atveram PowerPoint šablonu
 prs = Presentation(template_path)
 
-# Remove all existing slides
+# Noņemam visus sākotnējos slaidus no šablona, lai strādātu ar tukšu prezentāciju
 slide_ids = [sld.rId for sld in prs.slides._sldIdLst]
 for rId in slide_ids:
     prs.part.drop_rel(rId)
@@ -103,18 +113,19 @@ slide_layouts = prs.slide_layouts
 title_layout = slide_layouts[0]
 content_layout = slide_layouts[1]
 
-tmp_images = []
+tmp_images = []  # saraksts uz laika failiem, ko pēc tam dzēsīsim
 
+# Izveidojam slaidus pēc JSON datiem
 for i, slide_data in enumerate(slides_data):
+    # Izmantosim title layout pirmajam slaidam, pārējiem content layout
     layout = title_layout if i == 0 else content_layout
 
     slide = prs.slides.add_slide(layout)
 
+    # Attēls nav paredzēts pirmajam (title) slaidam
     place_image = (i != 0)
 
-    # Determine image query: priority
-    # 1) slide title + first bullet
-    # 2) fallback to presentation topic if available
+    # Noteiksim meklēšanas vaicājumu attēlam: prioritāte virsraksts + pirmais bullet
     query = ''
     if isinstance(slide_data, dict):
         title_text = slide_data.get('title', '') or ''
@@ -128,11 +139,12 @@ for i, slide_data in enumerate(slides_data):
         query = (title_text + ' ' + first_bullet).strip()
 
     if not query:
+        # Ja nav individuālā vaicājuma, izmanto prezentācijas 'topic' kā fallback
         query = data.get('topic', '')
 
     img_path = None
     if query and place_image:
-        # Download image
+        # Mēģinām lejupielādēt attēlu līdz 3 reizēm ar nelielu pauzi starp mēģinājumiem
         for attempt in range(1, 4):
             img_path = download_image_for_query(query)
             if img_path:
@@ -142,15 +154,17 @@ for i, slide_data in enumerate(slides_data):
 
     if img_path:
         try:
-            # Calculate placement:
+            # Aprēķinām attēla izvietojumu: labajā puse, ar nelielu marginu
             margin = Inches(0.3)
             max_width = int(prs.slide_width * 0.4 - margin)
             left = int(prs.slide_width - max_width - margin)
 
             pic = slide.shapes.add_picture(img_path, left, int(margin), width=max_width)
 
+            # Vertikāli centrujam attēlu slaidā
             pic.top = int((prs.slide_height - pic.height) / 2)
 
+            # Pārvietojam visus tekstu elementus uz priekšplānu, lai teksts būtu redzams virs attēla
             text_elements = []
             for shp in list(slide.shapes):
                 try:
@@ -168,8 +182,10 @@ for i, slide_data in enumerate(slides_data):
                     pass
 
         except Exception as e:
+            # Brīdinājums, ja attēla ievietošana neizdodas — skripts turpina darbu bez attēla
             print(f"[WARN] Failed to place image on slide {i}: {e}")
 
+    # Uzstādām virsrakstu, ja tas ir pieejams un definēts JSON
     title_shape = None
     try:
         title_shape = slide.shapes.title
@@ -180,6 +196,7 @@ for i, slide_data in enumerate(slides_data):
         if slide_data.get('title'):
             title_shape.text = slide_data['title']
 
+    # Mēģinām atrast body placeholder (BODY vai SUBTITLE uz pirmajiem slaidiem)
     body_shape = None
     try:
         for shape in slide.placeholders:
@@ -193,28 +210,42 @@ for i, slide_data in enumerate(slides_data):
     except Exception:
         body_shape = None
 
-    # Fallback
+    # Fallback: ja nav placeholder, izvēlamies lielāko tekstu laukumu
     if body_shape is None:
         candidates = [sh for sh in slide.shapes if sh.has_text_frame and sh != title_shape]
         if candidates:
-            body_shape = max(candidates, key=lambda sh: sh.height)  
+            body_shape = max(candidates, key=lambda sh: sh.height)
 
+    # Aizpildām bullet punktus, ja tie definēti JSON
     if body_shape and isinstance(slide_data, dict) and 'bullets' in slide_data:
+        bullets = slide_data['bullets']
         tf = body_shape.text_frame
-        tf.clear()  
-        for bullet in slide_data['bullets']:
-            p = tf.add_paragraph()
-            p.text = bullet
-            p.level = 0
+        if bullets:
+            # Uzstādām pirmo rindu uz pirmo bullet, pārējie kā papildu rindas
+            tf.text = bullets[0]
+            for bullet in bullets[1:]:
+                p = tf.add_paragraph()
+                p.text = bullet
+                p.level = 0
+            # Fiksējam fonta izmēru visiem runiem, lai izskatītos konsekventi
+            for paragraph in tf.paragraphs:
+                for run in paragraph.runs:
+                    run.font.size = Pt(18)
+        else:
+            tf.clear()
 
+# Saglabājam izveidoto prezentāciju uz diska
 prs.save(output_path)
 
+# Dzēšam visus pagaidu attēlu failus
 for p in tmp_images:
     try:
         os.remove(p)
     except Exception:
         pass
 
+# Labojums [Content_Types].xml — nodrošinām pareizu ContentType ierakstu prezentācijas daļai
+# Dažos vides apstākļos tas var būt nepieciešams, lai Office atpazītu failu kā .pptx
 temp_path = output_path + '.temp'
 with zipfile.ZipFile(output_path, 'r') as zin:
     with zipfile.ZipFile(temp_path, 'w') as zout:
