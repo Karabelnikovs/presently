@@ -46,7 +46,7 @@ const Alert = ({ isOpen, onClose, message, type = "success" }) => {
             <div
                 role="dialog"
                 aria-modal="true"
-                className={`relative max-w-lg w-full bg-white rounded-2xl shadow-xl p-8 space-y-8 transition-all duration-600 ease-out ${
+                className={`relative w-full max-w-lg space-y-8 rounded-3xl border border-white/80 bg-white/90 p-8 shadow-2xl shadow-slate-300/50 backdrop-blur transition-all duration-600 ease-out ${
                     visible
                         ? "opacity-100 translate-y-0"
                         : "opacity-0 translate-y-5"
@@ -67,7 +67,7 @@ const Alert = ({ isOpen, onClose, message, type = "success" }) => {
                 <div className="flex justify-center">
                     <button
                         onClick={() => onClose()}
-                        className="w-full bg-blue-600 text-white font-semibold rounded-xl px-5 py-2 transition transform duration-150 ease-out active:scale-95"
+                        className="w-full rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-2.5 font-semibold text-white transition duration-150 ease-out hover:brightness-105 active:scale-95"
                     >
                         Close
                     </button>

@@ -3,3 +3,13 @@
 @source '../**/*.blade.php';
 @source '../**/*.js';
 @source '../**/*.jsx';
+
+@layer base {
+    body {
+        @apply bg-slate-50 text-slate-800 antialiased;
+        background-image:
+            radial-gradient(circle at 10% 10%, rgba(59, 130, 246, 0.16), transparent 32%),
+            radial-gradient(circle at 85% 15%, rgba(168, 85, 247, 0.12), transparent 28%);
+        min-height: 100vh;
+    }
+}

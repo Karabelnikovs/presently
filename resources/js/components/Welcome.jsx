@@ -9,7 +9,9 @@ const Welcome = () => {
     }, []);
 
     return (
-        <div className="min-h-screen w-full flex flex-col">
+        <div className="relative min-h-screen w-full overflow-hidden">
+            <div className="pointer-events-none absolute -top-28 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-blue-300/25 blur-3xl" />
+            <div className="pointer-events-none absolute -right-24 top-1/3 h-72 w-72 rounded-full bg-fuchsia-300/20 blur-3xl" />
             <style>{`
                 @keyframes float {
                     0%, 100% { transform: translateY(0px); }
@@ -39,7 +41,7 @@ const Welcome = () => {
                 }
             `}</style>
 
-            <section className="relative flex-1 flex items-center justify-center text-center px-4 py-16 md:py-24">
+            <section className="relative z-10 flex items-center justify-center px-4 py-16 text-center md:py-24">
                 <div
                     className={`max-w-5xl mx-auto space-y-8 transition-all duration-1000 ${
                         isVisible
@@ -47,21 +49,21 @@ const Welcome = () => {
                             : "opacity-0 translate-y-10"
                     }`}
                 >
-                    <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold text-gray-900 leading-tight">
+                    <h1 className="text-5xl leading-tight font-bold text-slate-900 md:text-7xl lg:text-8xl">
                         Create Beautiful
                         <br />
                         <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-blue-500 to-blue-400">
                             Presentations
                         </span>
                     </h1>
-                    <p className="text-lg md:text-xl lg:text-2xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+                    <p className="mx-auto max-w-3xl text-lg leading-relaxed text-slate-600 md:text-xl lg:text-2xl">
                         Transform your ideas into stunning slides. Simple, fast,
                         and beautifully designed.
                     </p>
                     <div className="flex flex-col sm:flex-row justify-center gap-4 mt-10">
                         <Link
                             to="/register"
-                            className="group px-10 py-4 bg-blue-600 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl hover:bg-blue-700 transition-all duration-300 transform hover:scale-105"
+                            className="group rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-10 py-4 font-semibold text-white shadow-xl shadow-blue-200 transition-all duration-300 hover:scale-105 hover:brightness-105"
                         >
                             <span className="inline-flex items-center gap-2">
                                 Get Started Free
@@ -72,7 +74,7 @@ const Welcome = () => {
                         </Link>
                         <Link
                             to="/login"
-                            className="px-10 py-4 bg-white text-blue-600 font-semibold rounded-lg shadow-md hover:shadow-lg border-2 border-blue-200 hover:border-blue-400 transition-all duration-300 transform hover:scale-105"
+                            className="rounded-xl border-2 border-blue-200 bg-white/90 px-10 py-4 font-semibold text-blue-700 shadow-md transition-all duration-300 hover:scale-105 hover:border-blue-400 hover:shadow-lg"
                         >
                             Log In
                         </Link>
@@ -80,7 +82,7 @@ const Welcome = () => {
                 </div>
             </section>
 
-            <section className="py-16 md:py-24 px-4">
+            <section className="relative z-10 px-4 py-16 md:py-24">
                 <div className="max-w-6xl mx-auto">
                     <h2 className="text-4xl md:text-5xl font-bold text-center text-gray-900 mb-4">
                         Everything You Need
@@ -157,7 +159,7 @@ const Welcome = () => {
                         ].map((feature, index) => (
                             <div
                                 key={index}
-                                className="card-hover bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg"
+                                className="card-hover rounded-3xl border border-white/80 bg-white/85 p-8 shadow-xl shadow-slate-200/70 backdrop-blur-sm"
                                 style={{ animationDelay: feature.delay }}
                             >
                                 <div className="text-blue-600 mb-6 animate-float">
@@ -175,8 +177,8 @@ const Welcome = () => {
                 </div>
             </section>
 
-            <section className="py-16 md:py-20 px-4">
-                <div className="max-w-4xl mx-auto text-center bg-gradient-to-r from-blue-600 to-blue-500 rounded-3xl p-12 md:p-16 shadow-2xl">
+            <section className="relative z-10 px-4 py-16 md:py-20">
+                <div className="mx-auto max-w-4xl rounded-3xl bg-gradient-to-r from-blue-600 to-indigo-600 p-12 text-center shadow-2xl shadow-blue-200/70 md:p-16">
                     <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
                         Ready to Get Started?
                     </h2>

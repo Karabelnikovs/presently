@@ -56,11 +56,11 @@ const Register = ({ setUser }) => {
     };
     return (
         <div
-            className={`max-w-lg w-full bg-white rounded-2xl shadow-xl p-8 space-y-8 transition-all duration-600 ease-out ${
+            className={`w-full max-w-lg space-y-8 rounded-3xl border border-white/80 bg-white/85 p-8 shadow-2xl shadow-slate-200/70 backdrop-blur transition-all duration-600 ease-out ${
                 loaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5"
             }`}
         >
-            <h1 className="text-3xl font-bold text-center text-gray-800">
+            <h1 className="text-center text-3xl font-bold text-slate-900">
                 Register
             </h1>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -95,10 +95,10 @@ const Register = ({ setUser }) => {
                             required
                             onFocus={() => setNameFocused(true)}
                             onBlur={() => setNameFocused(false)}
-                            className={`w-full pl-12 pr-4 py-3 rounded-xl border-2 transition-all duration-300 outline-none ${
+                            className={`w-full rounded-xl border-2 py-3 pl-12 pr-4 outline-none transition-all duration-300 ${
                                 nameFocused
-                                    ? "border-blue-600 shadow-lg shadow-blue-100"
-                                    : "border-gray-200 shadow-sm"
+                                    ? "border-blue-500 shadow-lg shadow-blue-100"
+                                    : "border-slate-200 bg-white shadow-sm"
                             } `}
                         />
                     </div>
@@ -134,10 +134,10 @@ const Register = ({ setUser }) => {
                             required
                             onFocus={() => setEmailFocused(true)}
                             onBlur={() => setEmailFocused(false)}
-                            className={`w-full pl-12 pr-4 py-3 rounded-xl border-2 transition-all duration-300 outline-none ${
+                            className={`w-full rounded-xl border-2 py-3 pl-12 pr-4 outline-none transition-all duration-300 ${
                                 emailFocused
-                                    ? "border-blue-600 shadow-lg shadow-blue-100"
-                                    : "border-gray-200 shadow-sm"
+                                    ? "border-blue-500 shadow-lg shadow-blue-100"
+                                    : "border-slate-200 bg-white shadow-sm"
                             } `}
                         />
                     </div>
@@ -173,10 +173,10 @@ const Register = ({ setUser }) => {
                             required
                             onFocus={() => setPswrdFocused(true)}
                             onBlur={() => setPswrdFocused(false)}
-                            className={`w-full pl-12 pr-4 py-3 rounded-xl border-2 transition-all duration-300 outline-none ${
+                            className={`w-full rounded-xl border-2 py-3 pl-12 pr-4 outline-none transition-all duration-300 ${
                                 pswrdFocused
-                                    ? "border-blue-600 shadow-lg shadow-blue-100"
-                                    : "border-gray-200 shadow-sm"
+                                    ? "border-blue-500 shadow-lg shadow-blue-100"
+                                    : "border-slate-200 bg-white shadow-sm"
                             } `}
                         />
                     </div>
@@ -214,17 +214,17 @@ const Register = ({ setUser }) => {
                             required
                             onFocus={() => sePswrdConfFocused(true)}
                             onBlur={() => sePswrdConfFocused(false)}
-                            className={`w-full pl-12 pr-4 py-3 rounded-xl border-2 transition-all duration-300 outline-none ${
+                            className={`w-full rounded-xl border-2 py-3 pl-12 pr-4 outline-none transition-all duration-300 ${
                                 pswrdConfFocused
-                                    ? "border-blue-600 shadow-lg shadow-blue-100"
-                                    : "border-gray-200 shadow-sm"
+                                    ? "border-blue-500 shadow-lg shadow-blue-100"
+                                    : "border-slate-200 bg-white shadow-sm"
                             } `}
                         />
                     </div>
                 </div>
                 <button
                     type="submit"
-                    className="w-full bg-blue-600 text-white font-semibold rounded-xl px-5 py-2 transition transform duration-150 ease-out active:scale-95 shadow-md shadow-blue-200 hover:shadow-lg"
+                    className="w-full rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-2.5 font-semibold text-white shadow-lg shadow-blue-200 transition duration-150 ease-out hover:brightness-105 active:scale-95"
                 >
                     Register
                 </button>

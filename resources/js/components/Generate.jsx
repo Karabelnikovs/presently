@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { getCsrfToken, getCookie } from "../utils/csrf";
 import Alert from "./Alert";
@@ -78,6 +78,8 @@ const TEMPLATES = [
         preview_image: "url('/templates_previews/cozy.png')",
     },
 ];
+const DRAFT_KEY = "presentation.generate.draft.v1";
+const ACTIVE_KEY = "presentation.generate.active.v1";
 
 const Generate = ({ user }) => {
     const [topic, setTopic] = useState("");
@@ -85,6 +87,10 @@ const Generate = ({ user }) => {
     const [template, setTemplate] = useState("default");
     const [file, setFile] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [isGameOpen, setIsGameOpen] = useState(false);
+    const [generationStatus, setGenerationStatus] = useState("idle");
+    const [generationMessage, setGenerationMessage] = useState("");
+    const [downloadFile, setDownloadFile] = useState("");
     const [isFormLoaded, setIsFormLoaded] = useState(false);
     const navigate = useNavigate();
 
@@ -95,6 +101,10 @@ const Generate = ({ user }) => {
     const [isDragging, setIsDragging] = useState(false);
     const [topicFocused, setTopicFocused] = useState(false);
     const [countFocused, setCountFocused] = useState(false);
+    const [resumeModalOpen, setResumeModalOpen] = useState(false);
+    const [resumeData, setResumeData] = useState(null);
+    const pollRef = useRef(null);
+    const isUnloadingRef = useRef(false);
 
     const pickRandomTopic = useCallback(() => {
         const idx = Math.floor(Math.random() * TOPICS.length);
@@ -123,6 +133,128 @@ const Generate = ({ user }) => {
 
         setTopic(pickRandomTopic());
     }, [user, navigate, pickRandomTopic]);
+
+    const clearPolling = useCallback(() => {
+        if (!pollRef.current) return;
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+    }, []);
+
+    const clearActiveGeneration = useCallback(() => {
+        localStorage.removeItem(ACTIVE_KEY);
+    }, []);
+
+    const startStatusPolling = useCallback(
+        (generationId) => {
+            if (!generationId) return;
+            clearPolling();
+            setIsLoading(true);
+            setIsGameOpen(true);
+            setGenerationStatus("loading");
+            setGenerationMessage(
+                "Please wait while your presentation is generated."
+            );
+            let misses = 0;
+            const checkStatus = async () => {
+                try {
+                    const res = await fetch(
+                        `/generation-status/${generationId}`,
+                        {
+                            headers: { Accept: "application/json" },
+                            credentials: "include",
+                        }
+                    );
+                    if (res.status === 404) {
+                        misses += 1;
+                        if (misses < 6) return;
+                        throw new Error("Generation session was not found.");
+                    }
+                    const data = await res.json();
+                    if (data.status === "processing") return;
+                    clearPolling();
+                    setIsLoading(false);
+                    if (data.status === "completed" && data.file) {
+                        setGenerationStatus("success");
+                        setGenerationMessage(
+                            "Presentation is ready. Download started automatically."
+                        );
+                        setDownloadFile(data.file);
+                        clearActiveGeneration();
+                        window.location.href = `/download-presentation/${data.file}`;
+                        return;
+                    }
+                    const msg =
+                        data.error ||
+                        data.message ||
+                        "Presentation generation failed.";
+                    setGenerationStatus("error");
+                    setGenerationMessage(msg);
+                    setModalMessage(`Error: ${msg}`);
+                    setModalType("error");
+                    setModalOpen(true);
+                    clearActiveGeneration();
+                } catch (err) {
+                    clearPolling();
+                    setIsLoading(false);
+                    setGenerationStatus("error");
+                    setGenerationMessage(err.message);
+                    setModalMessage(`Error: ${err.message}`);
+                    setModalType("error");
+                    setModalOpen(true);
+                    clearActiveGeneration();
+                }
+            };
+            checkStatus();
+            pollRef.current = setInterval(checkStatus, 2000);
+        },
+        [clearActiveGeneration, clearPolling]
+    );
+
+    useEffect(() => {
+        const onBeforeUnload = () => {
+            isUnloadingRef.current = true;
+        };
+        window.addEventListener("beforeunload", onBeforeUnload);
+        return () => window.removeEventListener("beforeunload", onBeforeUnload);
+    }, []);
+
+    useEffect(() => {
+        const savedDraft = localStorage.getItem(DRAFT_KEY);
+        if (savedDraft) {
+            try {
+                const draft = JSON.parse(savedDraft);
+                if (draft?.topic) setTopic(draft.topic);
+                if (draft?.slides) {
+                    setSlides(Math.max(1, Math.min(20, Number(draft.slides))));
+                }
+                if (draft?.template) setTemplate(draft.template);
+            } catch (_) {}
+        }
+
+        const raw = localStorage.getItem(ACTIVE_KEY);
+        if (!raw) return;
+        try {
+            const saved = JSON.parse(raw);
+            if (saved?.status === "processing" && saved?.generationId) {
+                setResumeData(saved);
+                setResumeModalOpen(true);
+            }
+        } catch (_) {}
+    }, []);
+
+    useEffect(() => {
+        localStorage.setItem(
+            DRAFT_KEY,
+            JSON.stringify({
+                topic,
+                slides: Number(slides),
+                template,
+                updatedAt: Date.now(),
+            })
+        );
+    }, [topic, slides, template]);
+
+    useEffect(() => () => clearPolling(), [clearPolling]);
 
     const handleFileChange = (e) => {
         const selectedFile = e.dataTransfer
@@ -185,7 +317,26 @@ const Generate = ({ user }) => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        clearPolling();
+        const generationId =
+            (typeof crypto !== "undefined" && crypto.randomUUID?.()) ||
+            `gen_${Date.now()}`;
+        localStorage.setItem(
+            ACTIVE_KEY,
+            JSON.stringify({
+                generationId,
+                status: "processing",
+                topic,
+                slides: Number(slides),
+                template,
+                startedAt: Date.now(),
+            })
+        );
         setIsLoading(true);
+        setIsGameOpen(true);
+        setGenerationStatus("loading");
+        setGenerationMessage("Please wait while your presentation is generated.");
+        setDownloadFile("");
         await getCsrfToken();
         const xsrfToken = decodeURIComponent(getCookie("XSRF-TOKEN") || "");
 
@@ -193,6 +344,7 @@ const Generate = ({ user }) => {
         formData.append("topic", topic);
         formData.append("slides", Number(slides));
         formData.append("template", template);
+        formData.append("generation_id", generationId);
         if (file) {
             formData.append("docx_file", file);
         }
@@ -222,15 +374,27 @@ const Generate = ({ user }) => {
             const data = await response.json();
 
             if (data.file) {
+                setGenerationStatus("success");
+                setGenerationMessage(
+                    "Presentation is ready. Download started automatically."
+                );
+                setDownloadFile(data.file);
+                clearActiveGeneration();
                 window.location.href = `/download-presentation/${data.file}`;
+            } else if (data.generation_id) {
+                startStatusPolling(data.generation_id);
             } else {
                 throw new Error("No filename returned from server");
             }
         } catch (error) {
+            if (isUnloadingRef.current) return;
             console.error("Error:", error);
+            setGenerationStatus("error");
+            setGenerationMessage(error.message);
             setModalMessage(`Error: ${error.message}`);
             setModalType("error");
             setModalOpen(true);
+            clearActiveGeneration();
         } finally {
             setIsLoading(false);
         }
@@ -241,6 +405,13 @@ const Generate = ({ user }) => {
             e.preventDefault();
             setTemplate(templateId);
         }
+    };
+
+    const handleOpenMemoGame = () => {
+        setGenerationStatus("idle");
+        setGenerationMessage("");
+        setDownloadFile("");
+        setIsGameOpen(true);
     };
 
     return (
@@ -254,22 +425,85 @@ const Generate = ({ user }) => {
                 </div>
             )} */}
             <MiniLoaderMemo
-                isLoading={isLoading}
-                onFinish={() => setIsLoading(false)}
+                isOpen={isGameOpen}
+                isGenerating={isLoading}
+                status={generationStatus}
+                statusMessage={generationMessage}
+                onClose={() => setIsGameOpen(false)}
+                onDownload={
+                    downloadFile
+                        ? () =>
+                              (window.location.href = `/download-presentation/${downloadFile}`)
+                        : null
+                }
             />
+            {resumeModalOpen && resumeData && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+                    <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl">
+                        <h3 className="text-lg font-semibold text-slate-900">
+                            Continue previous generation?
+                        </h3>
+                        <p className="mt-2 text-sm text-slate-600">
+                            Topic: {resumeData.topic || "Uploaded document"}.
+                            Slides: {resumeData.slides}. Design:{" "}
+                            {resumeData.template}.
+                        </p>
+                        <p className="mt-2 text-sm text-slate-600">
+                            We can continue generating with the same input and
+                            design.
+                        </p>
+                        <div className="mt-4 flex justify-end gap-2">
+                            <button
+                                type="button"
+                                className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                                onClick={() => {
+                                    setResumeModalOpen(false);
+                                    setResumeData(null);
+                                    clearActiveGeneration();
+                                }}
+                            >
+                                Start new
+                            </button>
+                            <button
+                                type="button"
+                                className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700"
+                                onClick={() => {
+                                    setTopic(resumeData.topic || "");
+                                    setSlides(
+                                        Math.max(
+                                            1,
+                                            Math.min(
+                                                20,
+                                                Number(resumeData.slides) || 5
+                                            )
+                                        )
+                                    );
+                                    setTemplate(
+                                        resumeData.template || "default"
+                                    );
+                                    setResumeModalOpen(false);
+                                    startStatusPolling(resumeData.generationId);
+                                }}
+                            >
+                                Continue
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <div
-                className={`max-w-4xl w-full bg-white rounded-2xl shadow-xl p-4 sm:p-6 md:p-8 space-y-8 transition-all duration-600 ease-out ${
+                className={`w-full max-w-5xl space-y-8 my-6 rounded-3xl border border-white/80 bg-white/85 p-4 shadow-2xl shadow-slate-200/70 backdrop-blur transition-all duration-600 ease-out sm:p-6 md:p-8 ${
                     isFormLoaded
                         ? "opacity-100 translate-y-0"
                         : "opacity-0 translate-y-5"
                 }`}
             >
                 <div className="text-center">
-                    <h1 className="text-3xl md:text-4xl font-bold text-gray-800">
+                    <h1 className="text-3xl font-bold text-slate-900 md:text-4xl">
                         Generate Your Presentation
                     </h1>
-                    <p className="mt-2 text-gray-500">
+                    <p className="mt-2 text-slate-500">
                         Let AI do the heavy lifting for you.
                     </p>
                 </div>
@@ -320,7 +554,7 @@ const Generate = ({ user }) => {
                         type="button"
                         onClick={() => setTopic(pickRandomTopic())}
                         title="Randomize topic"
-                        className="inline-flex items-center justify-center px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 hover:bg-gray-100 text-sm w-full  transition transform duration-150 ease-out active:scale-95 active:shadow-lg"
+                        className="inline-flex w-full items-center justify-center rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 transition duration-150 ease-out hover:bg-slate-100 active:scale-95 active:shadow-lg"
                     >
                         Shuffle
                     </button>
@@ -335,13 +569,13 @@ const Generate = ({ user }) => {
                             onDragLeave={handleDragLeave}
                             onDragOver={handleDragOver}
                             onDrop={handleDrop}
-                            className={`relative group flex flex-col justify-center items-center w-full h-48 rounded-lg border-2 border-dashed transition-all duration-300 ease-in-out cursor-pointer
+                            className={`relative group flex h-48 w-full cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed transition-all duration-300 ease-in-out
                             ${
                                 isDragging
-                                    ? "border-blue-500 bg-blue-50 scale-105"
-                                    : "border-gray-300 hover:border-blue-400"
+                                    ? "scale-105 border-blue-500 bg-blue-50"
+                                    : "border-slate-300 hover:border-blue-400"
                             }
-                            ${file ? "border-green-500 bg-green-50" : ""}`}
+                            ${file ? "border-emerald-500 bg-emerald-50" : ""}`}
                         >
                             <input
                                 id="docx_file"
@@ -380,7 +614,7 @@ const Generate = ({ user }) => {
                                             e.stopPropagation();
                                             setFile(null);
                                         }}
-                                        className="mt-3 text-sm font-medium text-red-600 hover:text-red-700 transition-colors z-10"
+                                        className="z-10 mt-3 text-sm font-medium text-red-600 transition-colors hover:text-red-700"
                                     >
                                         Remove File
                                     </button>
@@ -482,10 +716,10 @@ const Generate = ({ user }) => {
                                             handleCardKey(e, t.id)
                                         }
                                         onClick={() => setTemplate(t.id)}
-                                        className={`cursor-pointer rounded-lg border transition-all duration-200 p-1.5 ${
+                                        className={`cursor-pointer rounded-xl border p-1.5 transition-all duration-200 ${
                                             isSelected
-                                                ? "ring-2 ring-blue-500 border-transparent shadow-lg"
-                                                : "border-gray-200 hover:shadow-md hover:border-gray-300"
+                                                ? "border-transparent ring-2 ring-blue-500 shadow-lg shadow-blue-100"
+                                                : "border-slate-200 hover:border-slate-300 hover:shadow-md"
                                         }`}
                                     >
                                         <div
@@ -522,9 +756,10 @@ const Generate = ({ user }) => {
 
                     <button
                         type="submit"
-                        className="w-full bg-blue-600 text-white font-semibold rounded-xl px-5 py-2 transition transform duration-150 ease-out active:scale-95 shadow-md shadow-blue-200 hover:shadow-lg"
+                        disabled={isLoading}
+                        className="w-full rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-2.5 font-semibold text-white shadow-lg shadow-blue-200 transition duration-150 ease-out hover:brightness-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                        Generate Presentation
+                        {isLoading ? "Generating..." : "Generate Presentation"}
                     </button>
                 </form>
 
@@ -547,6 +782,16 @@ const Generate = ({ user }) => {
                         Ensure your Laravel and Ollama servers are running
                         correctly.
                     </p>
+                </div>
+
+                <div className="flex justify-center">
+                    <button
+                        type="button"
+                        onClick={handleOpenMemoGame}
+                        className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-100"
+                    >
+                        Play memo game
+                    </button>
                 </div>
             </div>
             <Alert

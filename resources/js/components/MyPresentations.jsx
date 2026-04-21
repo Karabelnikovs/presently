@@ -93,11 +93,11 @@ const MyPresentations = ({ user }) => {
 
     return (
         <div
-            className={`max-w-4xl w-full bg-white rounded-2xl shadow-xl p-4 sm:p-6 md:p-8 space-y-6 transition-all duration-600 ease-out ${
+            className={`w-full max-w-5xl my-6 space-y-6 rounded-3xl border border-white/80 bg-white/85 p-4 shadow-2xl shadow-slate-200/70 backdrop-blur transition-all duration-600 ease-out sm:p-6 md:p-8 ${
                 loaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5"
             }`}
         >
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 text-center">
+            <h1 className="text-center text-2xl font-bold text-slate-900 sm:text-3xl">
                 My Presentations
             </h1>
 
@@ -126,10 +126,10 @@ const MyPresentations = ({ user }) => {
                         onChange={(e) => setSearchQuery(e.target.value)}
                         onFocus={() => setSearchFocused(true)}
                         onBlur={() => setSearchFocused(false)}
-                        className={`w-full pl-12 pr-4 py-3 rounded-xl border-2 transition-all duration-300 outline-none ${
+                        className={`w-full rounded-xl border-2 py-3 pl-12 pr-4 outline-none transition-all duration-300 ${
                             searchFocused
-                                ? "border-blue-600 shadow-lg shadow-blue-100"
-                                : "border-gray-200 shadow-sm"
+                                ? "border-blue-500 shadow-lg shadow-blue-100"
+                                : "border-slate-200 bg-white shadow-sm"
                         } focus:ring-0`}
                     />
                     {searchQuery && (
@@ -163,7 +163,7 @@ const MyPresentations = ({ user }) => {
                         {currentPresentations.map((p, idx) => (
                             <li
                                 key={p.id}
-                                className="flex flex-col sm:flex-row sm:justify-between sm:items-center border border-gray-200 rounded-xl p-4 hover:shadow-md hover:border-blue-300 transition-all duration-200 animate-slideIn"
+                                className="animate-slideIn flex flex-col rounded-2xl border border-slate-200 bg-white/80 p-4 transition-all duration-200 hover:border-blue-300 hover:shadow-md sm:flex-row sm:items-center sm:justify-between"
                                 style={{ animationDelay: `${idx * 50}ms` }}
                             >
                                 <span className="text-gray-700 mb-2 sm:mb-0 break-words font-medium">
@@ -171,7 +171,7 @@ const MyPresentations = ({ user }) => {
                                 </span>
                                 <a
                                     href={`/download-presentation/${p.filename}`}
-                                    className="text-blue-600 hover:text-blue-700 hover:underline shrink-0 font-medium transition-colors duration-200"
+                                    className="shrink-0 rounded-lg bg-blue-50 px-3 py-1.5 font-medium text-blue-700 transition hover:bg-blue-100"
                                 >
                                     Download
                                 </a>
@@ -207,7 +207,7 @@ const MyPresentations = ({ user }) => {
                                         className={`min-w-[40px] h-10 rounded-lg font-medium transition-all duration-200 ${
                                             currentPage === page
                                                 ? "bg-blue-600 text-white shadow-md shadow-blue-200"
-                                                : "border border-gray-300 hover:bg-gray-50 text-gray-700 hover:shadow-sm"
+                                                : "border border-slate-300 text-slate-700 hover:bg-slate-50 hover:shadow-sm"
                                         }`}
                                     >
                                         {page}

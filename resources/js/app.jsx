@@ -42,9 +42,11 @@ function App() {
     return (
         <BrowserRouter>
             <Navbar user={user} setUser={setUser} />
-            <div className="container mx-auto p-4 flex items-center justify-center">
+            <main className="flex min-h-[calc(100vh-84px)] w-full items-center justify-center">
                 {loading ? (
-                    <div className="text-center">Loading...</div>
+                    <div className="rounded-2xl border border-slate-200/70 bg-white/90 px-6 py-4 text-center text-slate-600 shadow-lg backdrop-blur">
+                        Loading...
+                    </div>
                 ) : (
                     <Routes>
                         <Route element={<ProtectedRoute user={user} />}>
@@ -74,7 +76,7 @@ function App() {
                         <Route path="/" element={<Welcome />} />
                     </Routes>
                 )}
-            </div>
+            </main>
         </BrowserRouter>
     );
 }

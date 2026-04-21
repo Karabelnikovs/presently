@@ -16,10 +16,8 @@
             font-family: 'Poppins', sans-serif;
             background: linear-gradient(to bottom right, #f9fafb, #dbeafe);
             min-height: 100vh;
-            /* display: flex;
-            align-items: center;
-            justify-content: center; */
-            padding: 1rem;
+            margin: 0;
+            padding: 0;
         }
     </style>
     <link rel="icon" type="image/x-icon" href="/presently_favicon.png">

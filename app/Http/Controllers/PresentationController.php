@@ -6,6 +6,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 use App\Models\Presentation;
 use PhpOffice\PhpWord\IOFactory;
 use ZipArchive;
@@ -25,29 +27,48 @@ class PresentationController extends Controller
 
     public function generate(Request $request)
     {
-        // Galvenā funkcija prezentācijas izveidei.
+        ignore_user_abort(true);
+        if ($request->hasSession()) {
+            $request->session()->save();
+        }
         $useMockData = false;
         set_time_limit(300);
         ini_set('max_execution_time', 300);
+        $cacheKey = null;
 
         try {
-            // Validē ienākošos datus no formas.
             $request->validate([
                 'topic' => 'string|nullable',
                 'slides' => 'integer|min:1|max:20',
                 'template' => 'string|required',
                 'docx_file' => 'nullable|file|mimes:docx|max:5120',
+                'generation_id' => 'nullable|string|max:120',
             ]);
 
-            // Noklusējuma vērtības, ja netiek iedotas.
+            $generationId = $request->input('generation_id') ?: (string) Str::uuid();
+            $cacheKey = $this->generationCacheKey($generationId, auth()->id());
+            $existing = Cache::get($cacheKey);
+            if (($existing['status'] ?? null) === 'processing') {
+                return response()->json([
+                    'status' => 'processing',
+                    'generation_id' => $generationId,
+                ], 202);
+            }
+
             $topic = $request->input('topic', 'AI in Healthcare');
             $slideCount = (int) $request->input('slides', 5);
             $templateId = $request->input('template', 'default');
+            Cache::put($cacheKey, [
+                'status' => 'processing',
+                'topic' => $topic,
+                'slides' => $slideCount,
+                'template' => $templateId,
+                'updated_at' => now()->toISOString(),
+            ], now()->addHours(6));
 
             $documentContent = '';
 
             if ($request->hasFile('docx_file')) {
-                // Ja lietotājs augšupielādē .docx, saglabā to pagaidām.
                 $file = $request->file('docx_file');
                 $tempPath = $file->store('temp');
 
@@ -62,12 +83,10 @@ class PresentationController extends Controller
 
                 while ($loadAttempts < $maxAttempts) {
                     try {
-                        // Mēģina ielādēt .docx ar PhpWord.
                         $phpWord = IOFactory::load($fullPath);
                         $sections = $phpWord->getSections();
                         $documentContent = '';
 
-                        // Nolasām tekstu no visām sadaļām.
                         foreach ($sections as $section) {
                             $elements = $section->getElements();
                             foreach ($elements as $element) {
@@ -81,15 +100,12 @@ class PresentationController extends Controller
                             }
                         }
 
-                        // Attīrām tekstu no nepareizām rakstzīmēm.
                         $documentContent = $this->sanitizeText($documentContent);
                         break;
                     } catch (\PhpOffice\PhpWord\Exception\Exception $e) {
-                        // Ja rodas kļūda, reģistrējam un mēģinām novērst noteiktu problēmu.
                         Log::error('Error loading DOCX file: ' . $e->getMessage() . ' Path: ' . $fullPath);
 
                         if (strpos($e->getMessage(), 'Cannot add PageBreak in Cell') !== false && $loadAttempts === 0) {
-                            // Mēģinām noņemt lapu pārrāvumus tabulas šūnās un ielādēt vēlreiz.
                             if ($this->removePageBreaksInCells($fullPath)) {
                                 Log::info('Attempted to remove invalid page breaks from DOCX file: ' . $fullPath);
                                 $loadAttempts++;
@@ -99,9 +115,13 @@ class PresentationController extends Controller
                             }
                         }
 
+                        Cache::put($cacheKey, [
+                            'status' => 'failed',
+                            'error' => 'The uploaded file is not a valid .docx document. ' . $e->getMessage(),
+                            'updated_at' => now()->toISOString(),
+                        ], now()->addHours(6));
                         return response()->json(['error' => 'The uploaded file is not a valid .docx document. ' . $e->getMessage()], 400);
                     } finally {
-                        // Dzēš pagaidu failu, ja esam beiguši mēģinājumus vai jau ir saturs.
                         if ($loadAttempts >= $maxAttempts || !empty($documentContent)) {
                             Storage::delete($tempPath);
                         }
@@ -109,23 +129,25 @@ class PresentationController extends Controller
                 }
 
                 if (empty($topic)) {
-                    // Ja nav tēmas, izmanto vispārīgu nosaukumu.
                     $topic = 'Presentation based on uploaded document';
                 }
             }
 
-            // Nosaka pieejamo template faila ceļu.
             $templateDir = config('presentation.templates_dir', resource_path('templates'));
             $templateFile = $templateDir . DIRECTORY_SEPARATOR . "{$templateId}.potx";
 
             if (!file_exists($templateFile)) {
+                Cache::put($cacheKey, [
+                    'status' => 'failed',
+                    'error' => "The selected design template '{$templateId}' is not available.",
+                    'updated_at' => now()->toISOString(),
+                ], now()->addHours(6));
                 return response()->json(['error' => "The selected design template '{$templateId}' is not available."], 400);
             }
 
             $parsedData = null;
 
             if ($useMockData) {
-                // Testēšanas režīms ar parauga datiem.
                 $mockJson = '{
                     "slides": [
                         { "title": "The Dawn of a New Era", "bullets": ["Artificial Intelligence is revolutionizing the healthcare industry.", "From diagnostics to treatment, AI is enhancing capabilities.", "This presentation will explore the key impacts of AI in modern medicine."]},
@@ -135,7 +157,6 @@ class PresentationController extends Controller
                 }';
                 $parsedData = json_decode($mockJson, true);
             } else {
-                // Sagatavojam promptu iekšējam LLM vai ģeneratoram.
                 $basePrompt = "Generate a detailed presentation outline";
                 if ($documentContent) {
                     $basePrompt .= " based on the following document content: \n\n" . $documentContent . "\n\n";
@@ -151,7 +172,6 @@ class PresentationController extends Controller
 
                 $systemPrompt = "You are a JSON generator. Always output only valid JSON as specified in the prompt.";
 
-                // Mēģinām sazināties ar lokālu LLM servisu līdz 3 reizes.
                 for ($try = 1; $try <= 3; $try++) {
                     $response = Http::timeout(240)->post('http://127.0.0.1:11434/api/generate', [
                         'model' => 'llama3.1:8b',
@@ -174,12 +194,15 @@ class PresentationController extends Controller
             }
 
             if (!isset($parsedData['slides']) || !is_array($parsedData['slides'])) {
-                // Ja nevar iegūt derīgus slaidu datus, atgriež kļūdu.
+                Cache::put($cacheKey, [
+                    'status' => 'failed',
+                    'error' => 'Could not obtain valid slides data.',
+                    'updated_at' => now()->toISOString(),
+                ], now()->addHours(6));
                 return response()->json(['error' => 'Could not obtain valid slides data.'], 500);
             }
 
             if (isset($parsedData['slides'][0])) {
-                // Pirmajam slaidam uzstāda tēmu kā nosaukumu.
                 $parsedData['slides'][0]['title'] = $topic;
             }
 
@@ -188,7 +211,6 @@ class PresentationController extends Controller
                 'slides' => $parsedData['slides'],
             ];
 
-            // Saglabājam datus īslaicīgā JSON failā, ko izmantos Python skripts.
             $dataFile = 'presentation_data_' . time() . '.json';
             $dataPath = storage_path('app/temp/' . $dataFile);
             if (!file_exists(dirname($dataPath))) {
@@ -196,36 +218,63 @@ class PresentationController extends Controller
             }
             file_put_contents($dataPath, json_encode($data));
 
-            // Gala PPTX faila ceļš publiskajā storage.
             $filePath = storage_path('app/public/presentation_' . time() . '.pptx');
 
-            // Izsaucam ārējo Python skriptu, kas uzbūvē prezentāciju no template un datiem.
             $pythonScript = base_path('scripts/generate_presentation.py');
             $command = escapeshellcmd('python3 ' . $pythonScript . ' ' . escapeshellarg($templateFile) . ' ' . escapeshellarg($filePath) . ' ' . escapeshellarg($dataPath));
             $output = shell_exec($command . ' 2>&1');
 
-            // Noņemam pagaidu JSON failu pēc skripta izpildes.
             unlink($dataPath);
 
             if (!file_exists($filePath)) {
-                // Ja fails netika izveidots, atgriežam kļūdu ar skripta izvadāmo info.
+                Cache::put($cacheKey, [
+                    'status' => 'failed',
+                    'error' => 'Failed to generate presentation via Python: ' . $output,
+                    'updated_at' => now()->toISOString(),
+                ], now()->addHours(6));
                 return response()->json(['error' => 'Failed to generate presentation via Python: ' . $output], 500);
             }
 
-            // Saglabā ierakstu datubāzē par jauno prezentāciju.
             Presentation::create([
                 'user_id' => auth()->id(),
                 'title' => $topic,
                 'filename' => basename($filePath),
             ]);
 
-            return response()->json(['message' => 'Presentation generated successfully', 'file' => basename($filePath)]);
+            Cache::put($cacheKey, [
+                'status' => 'completed',
+                'topic' => $topic,
+                'slides' => $slideCount,
+                'template' => $templateId,
+                'file' => basename($filePath),
+                'updated_at' => now()->toISOString(),
+            ], now()->addHours(6));
+            return response()->json([
+                'message' => 'Presentation generated successfully',
+                'file' => basename($filePath),
+                'generation_id' => $generationId,
+            ]);
 
         } catch (\Throwable $ex) {
-            // Vispārēja kļūdu apstrāde un ierakstīšana logā.
+            if ($cacheKey) {
+                Cache::put($cacheKey, [
+                    'status' => 'failed',
+                    'error' => 'Server error: ' . $ex->getMessage(),
+                    'updated_at' => now()->toISOString(),
+                ], now()->addHours(6));
+            }
             Log::error('Unhandled exception in generate(): ' . $ex->getMessage() . "\n" . $ex->getTraceAsString());
             return response()->json(['error' => 'Server error: ' . $ex->getMessage()], 500);
         }
+    }
+
+    public function generationStatus(Request $request, string $generationId)
+    {
+        $data = Cache::get($this->generationCacheKey($generationId, auth()->id()));
+        if (!$data) {
+            return response()->json(['status' => 'not_found'], 404);
+        }
+        return response()->json($data);
     }
 
     private function removePageBreaksInCells($filePath)
@@ -278,6 +327,11 @@ class PresentationController extends Controller
         }
         $s = trim($s);
         return $s;
+    }
+
+    private function generationCacheKey(string $generationId, int $userId): string
+    {
+        return "presentation_generation:{$userId}:{$generationId}";
     }
 
     public function downloadPresentation($filename)

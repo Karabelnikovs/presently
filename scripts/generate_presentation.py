@@ -33,7 +33,6 @@ data_path = sys.argv[3]
 unsplash_key = None
 if len(sys.argv) == 5:
     unsplash_key = sys.argv[4]
-    if sys.argv[4] else None
 
 # Ja atslēga nav norādīta komandrindā, mēģinām to ņemt no vides mainīgā
 if not unsplash_key:

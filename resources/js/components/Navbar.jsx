@@ -6,7 +6,7 @@ const NavLink = ({ to, children, onClick }) => (
     <Link
         to={to}
         onClick={onClick}
-        className="block px-3 py-2 rounded-md text-base font-medium text-white hover:bg-blue-700 md:text-sm md:inline-block md:p-0 md:hover:bg-transparent md:hover:underline"
+        className="block rounded-xl px-3 py-2 text-base font-medium text-slate-700 transition hover:bg-blue-50 hover:text-blue-700 md:inline-block md:text-sm"
     >
         {children}
     </Link>
@@ -44,14 +44,18 @@ const Navbar = ({ user, setUser }) => {
     };
 
     return (
-        <nav className="bg-blue-600 sticky top-0 shadow-md z-50 rounded-lg">
-            <div className="container mx-auto flex items-center justify-between p-4">
+        <nav className="sticky top-0 z-50 border-b border-slate-200/70 bg-white/85 backdrop-blur-xl rounded-lg m-4">
+            <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8 ">
                 <Link
                     to="/"
                     onClick={closeMenu}
-                    className="text-white text-xl font-bold mr-4 shrink-0"
+                    className="mr-4 shrink-0"
                 >
-                    <img src="/presently_logo.png " className='max-h-12' alt="Presentlty Logo"/>
+                    <img
+                        src="/presently-logo.svg"
+                        className="h-11 w-auto"
+                        alt="Presently Logo"
+                    />
                 </Link>
 
                 <div className="hidden md:flex items-center space-x-6">
@@ -64,7 +68,7 @@ const Navbar = ({ user, setUser }) => {
                             <NavLink to="/profile">Profile</NavLink>
                             <button
                                 onClick={handleLogout}
-                                className="text-white hover:underline text-sm font-medium cursor-pointer"
+                                className="cursor-pointer rounded-xl bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-200"
                             >
                                 Logout
                             </button>
@@ -81,24 +85,24 @@ const Navbar = ({ user, setUser }) => {
                     <button
                         onClick={() => setIsOpen(!isOpen)}
                         type="button"
-                        className="relative z-50 w-8 h-8 flex justify-center items-center text-white focus:outline-none"
+                        className="relative z-50 flex h-9 w-9 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-700 shadow-sm focus:outline-none"
                         aria-controls="mobile-menu"
                         aria-expanded={isOpen}
                     >
                         <span className="sr-only">Open main menu</span>
                         <div className="absolute w-6 h-6 transform transition-transform duration-300 ease-in-out cursor-pointer">
                             <span
-                                className={`block absolute h-0.5 w-full bg-white transform transition-all duration-300 ease-in-out ${
+                                className={`block absolute h-0.5 w-full bg-slate-700 transform transition-all duration-300 ease-in-out ${
                                     isOpen ? "rotate-45 top-2.5" : "top-1"
                                 }`}
                             ></span>
                             <span
-                                className={`block absolute h-0.5 w-full bg-white transform transition-all duration-300 ease-in-out ${
+                                className={`block absolute h-0.5 w-full bg-slate-700 transform transition-all duration-300 ease-in-out ${
                                     isOpen ? "opacity-0" : "top-2.5"
                                 }`}
                             ></span>
                             <span
-                                className={`block absolute h-0.5 w-full bg-white transform transition-all duration-300 ease-in-out ${
+                                className={`block absolute h-0.5 w-full bg-slate-700 transform transition-all duration-300 ease-in-out ${
                                     isOpen ? "-rotate-45 top-2.5" : "top-4"
                                 }`}
                             ></span>
@@ -114,7 +118,7 @@ const Navbar = ({ user, setUser }) => {
                 `}
                 id="mobile-menu"
             >
-                <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                <div className="space-y-1 border-t border-slate-200 px-3 pb-3 pt-2 sm:px-6">
                     {user ? (
                         <>
                             <NavLink to="/generate" onClick={closeMenu}>
@@ -128,7 +132,7 @@ const Navbar = ({ user, setUser }) => {
                             </NavLink>
                             <button
                                 onClick={handleLogout}
-                                className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-white hover:bg-blue-700 cursor-pointer"
+                                className="block w-full rounded-xl bg-slate-100 px-3 py-2 text-left text-base font-medium text-slate-700 transition hover:bg-slate-200"
                             >
                                 Logout
                             </button>
