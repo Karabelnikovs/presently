@@ -39,6 +39,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/generate-presentation', [PresentationController::class, 'generate']);
     Route::get('/generation-status/{generationId}', [PresentationController::class, 'generationStatus']);
     Route::get('/api/my-presentations', [PresentationController::class, 'index']);
+    Route::delete('/api/my-presentations/{id}', [PresentationController::class, 'destroy']);
     Route::get('/api/profile', [UserController::class, 'show']);
     Route::post('/api/profile', [UserController::class, 'update']);
     Route::get('/api/user', function (Request $request) {

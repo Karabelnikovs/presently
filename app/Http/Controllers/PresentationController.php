@@ -20,8 +20,10 @@ class PresentationController extends Controller
 
     public function index()
     {
-        // Iegūst visas pašreizējā lietotāja prezentācijas un atgriež JSON.
-        $presentations = auth()->user()->presentations;
+        $presentations = auth()->user()->presentations->map(function ($presentation) {
+            $presentation->is_demo = $this->isDemoPresentation($presentation);
+            return $presentation;
+        });
         return response()->json($presentations);
     }
 
@@ -171,9 +173,9 @@ class PresentationController extends Controller
                         {\"slides\": [{\"title\": \"\", \"bullets\": [\"\"]}]}.";
 
                 $systemPrompt = "You are a JSON generator. Always output only valid JSON as specified in the prompt.";
-
+                Log::info('trying to generate presentation');
                 for ($try = 1; $try <= 3; $try++) {
-                    // local
+                    // local llama server (download from https://ollama.com/download/mac llama3.1:8b)
                     // $response = Http::timeout(240)->post('http://127.0.0.1:11434/api/generate', [
                     //     'model' => 'llama3.1:8b',
                     //     'prompt' => $prompt,
@@ -182,14 +184,17 @@ class PresentationController extends Controller
                     //     'stream' => false,
                     // ]);
 
-                    $response = Http::timeout(240)->post(rtrim(env('LLM_BASE_URL'), '/') . '/api/generate', [
-                        'model' => env('LLM_MODEL', 'llama3.1:8b'),
-                        'prompt' => $prompt,
-                        'system' => $systemPrompt,
-                        'format' => 'json',
-                        'stream' => false,
-                    ]);
-
+                    // hosted llama on vps server
+                    $response = Http::timeout(240)
+                        ->withHeaders(['X-API-Key' => env('LLM_API_KEY')])
+                        ->post(rtrim(env('LLM_BASE_URL'), '/') . '/api/generate', [
+                            'model' => env('LLM_MODEL', 'llama3.1:8b'),
+                            'prompt' => $prompt,
+                            'system' => $systemPrompt,
+                            'format' => 'json',
+                            'stream' => false,
+                        ]);
+                    Log::info('response: ' . $response->body());
                     if ($response->successful()) {
                         $ollamaData = json_decode($response->body(), true);
                         $llmOutput = $ollamaData['response'] ?? '';
@@ -230,7 +235,20 @@ class PresentationController extends Controller
             $filePath = storage_path('app/public/presentation_' . time() . '.pptx');
 
             $pythonScript = base_path('scripts/generate_presentation.py');
-            $command = escapeshellcmd('python3 ' . $pythonScript . ' ' . escapeshellarg($templateFile) . ' ' . escapeshellarg($filePath) . ' ' . escapeshellarg($dataPath));
+
+            // locally
+            // $command = escapeshellcmd('python3 ' . $pythonScript . ' ' . escapeshellarg($templateFile) . ' ' . escapeshellarg($filePath) . ' ' . escapeshellarg($dataPath));
+            // $output = shell_exec($command . ' 2>&1');
+
+            // on hosted cpanel server
+            $pythonBin = env('PYTHON_BIN', 'python3');
+            $command = escapeshellarg($pythonBin) . ' ' .
+                escapeshellarg($pythonScript) . ' ' .
+                escapeshellarg($templateFile) . ' ' .
+                escapeshellarg($filePath) . ' ' .
+                escapeshellarg($dataPath);
+            putenv('HOME=' . (env('PYTHON_HOME') ?: '/home5/deveralv'));
+
             $output = shell_exec($command . ' 2>&1');
 
             unlink($dataPath);
@@ -357,5 +375,26 @@ class PresentationController extends Controller
         return response()->download($path, 'presentation.pptx', [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
         ]);
+    }
+
+    public function destroy(int $id)
+    {
+        $presentation = Presentation::where('user_id', auth()->id())->findOrFail($id);
+
+        if (!$this->isDemoPresentation($presentation)) {
+            $filename = ltrim($presentation->filename, '/');
+            if ($filename !== '') {
+                Storage::disk('public')->delete($filename);
+            }
+        }
+
+        $presentation->delete();
+
+        return response()->json(['message' => 'Presentation deleted']);
+    }
+
+    private function isDemoPresentation(Presentation $presentation): bool
+    {
+        return Str::startsWith($presentation->filename, 'demo_');
     }
 }

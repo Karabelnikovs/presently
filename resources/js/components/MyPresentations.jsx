@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { getCsrfToken, getCookie } from "../utils/csrf";
+import { ConfirmDialog } from "./Alert";
 
 const MyPresentations = ({ user }) => {
     const [presentations, setPresentations] = useState([]);
@@ -8,6 +10,8 @@ const MyPresentations = ({ user }) => {
     const [searchQuery, setSearchQuery] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
     const [searchFocused, setSearchFocused] = useState(false);
+    const [deletingId, setDeletingId] = useState(null);
+    const [deleteConfirm, setDeleteConfirm] = useState(null);
     const itemsPerPage = 5;
 
     useEffect(() => {
@@ -59,6 +63,32 @@ const MyPresentations = ({ user }) => {
 
     const handlePageChange = (page) => {
         setCurrentPage(page);
+    };
+
+    const runDelete = async (presentation) => {
+        if (deletingId) return;
+        setDeleteConfirm(null);
+        setDeletingId(presentation.id);
+        try {
+            await getCsrfToken();
+            const xsrfToken = decodeURIComponent(getCookie("XSRF-TOKEN") || "");
+            const res = await fetch(`/api/my-presentations/${presentation.id}`, {
+                method: "DELETE",
+                headers: {
+                    Accept: "application/json",
+                    "X-XSRF-TOKEN": xsrfToken,
+                },
+                credentials: "include",
+            });
+
+            if (!res.ok) throw new Error("Delete failed");
+            setPresentations((prev) => prev.filter((p) => p.id !== presentation.id));
+        } catch (error) {
+            console.error(error);
+            alert("Could not delete presentation.");
+        } finally {
+            setDeletingId(null);
+        }
     };
 
     const getPageNumbers = () => {
@@ -166,15 +196,34 @@ const MyPresentations = ({ user }) => {
                                 className="animate-slideIn flex flex-col rounded-2xl border border-slate-200 bg-white/80 p-4 transition-all duration-200 hover:border-blue-300 hover:shadow-md sm:flex-row sm:items-center sm:justify-between"
                                 style={{ animationDelay: `${idx * 50}ms` }}
                             >
-                                <span className="text-gray-700 mb-2 sm:mb-0 break-words font-medium">
-                                    {p.title}
-                                </span>
-                                <a
-                                    href={`/download-presentation/${p.filename}`}
-                                    className="shrink-0 rounded-lg bg-blue-50 px-3 py-1.5 font-medium text-blue-700 transition hover:bg-blue-100"
-                                >
-                                    Download
-                                </a>
+                                <div className="mb-2 sm:mb-0 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-gray-700 break-words font-medium">
+                                            {p.title}
+                                        </span>
+                                        {p.is_demo && (
+                                            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600">
+                                                Demo
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="flex shrink-0 items-center gap-2">
+                                    <a
+                                        href={`/download-presentation/${p.filename}`}
+                                        className="rounded-lg bg-blue-50 px-3 py-1.5 font-medium text-blue-700 transition hover:bg-blue-100"
+                                    >
+                                        Download
+                                    </a>
+                                    <button
+                                        type="button"
+                                        onClick={() => setDeleteConfirm(p)}
+                                        disabled={deletingId === p.id}
+                                        className="rounded-lg bg-rose-50 px-3 py-1.5 font-medium text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        {deletingId === p.id ? "Deleting..." : "Delete"}
+                                    </button>
+                                </div>
                             </li>
                         ))}
                     </ul>
@@ -266,6 +315,18 @@ const MyPresentations = ({ user }) => {
                     animation: fadeIn 0.3s ease-out;
                 }
             `}</style>
+
+            <ConfirmDialog
+                isOpen={!!deleteConfirm}
+                onClose={() => setDeleteConfirm(null)}
+                onConfirm={() => deleteConfirm && runDelete(deleteConfirm)}
+                title="Delete this presentation?"
+                message={
+                    deleteConfirm
+                        ? `“${deleteConfirm.title}” will be removed from your list. This cannot be undone.`
+                        : ""
+                }
+            />
         </div>
     );
 };
