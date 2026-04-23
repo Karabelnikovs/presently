@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { getCsrfToken, getCookie } from '../utils/csrf';
 
 const NavLink = ({ to, children, onClick }) => (
+    // Vienots stils navigācijas saitēm.
     <Link
         to={to}
         onClick={onClick}
@@ -19,6 +20,7 @@ const Navbar = ({ user, setUser }) => {
     const closeMenu = () => setIsOpen(false);
 
     const handleLogout = async () => {
+        // Droša izlogošanās ar CSRF aizsardzību.
         await getCsrfToken();
         const xsrfToken = decodeURIComponent(getCookie('XSRF-TOKEN') || '');
         try {
@@ -82,6 +84,7 @@ const Navbar = ({ user, setUser }) => {
                 </div>
 
                 <div className="md:hidden">
+                    {/* Mobilās izvēlnes poga ar hamburgera animāciju. */}
                     <button
                         onClick={() => setIsOpen(!isOpen)}
                         type="button"

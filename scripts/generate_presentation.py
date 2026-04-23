@@ -114,7 +114,7 @@ content_layout = slide_layouts[1]
 
 tmp_images = []  # saraksts uz laika failiem, ko pēc tam dzēsīsim
 
-# Izveidojam slaidus pēc JSON datiem
+# Izveidojam slaidus pēc JSON datiem.
 for i, slide_data in enumerate(slides_data):
     # Izmantosim title layout pirmajam slaidam, pārējiem content layout
     layout = title_layout if i == 0 else content_layout
@@ -184,7 +184,7 @@ for i, slide_data in enumerate(slides_data):
             # Brīdinājums, ja attēla ievietošana neizdodas — skripts turpina darbu bez attēla
             print(f"[WARN] Failed to place image on slide {i}: {e}")
 
-    # Uzstādām virsrakstu, ja tas ir pieejams un definēts JSON
+    # Uzstādām virsrakstu, ja tas ir pieejams un definēts JSON.
     title_shape = None
     try:
         title_shape = slide.shapes.title
@@ -215,7 +215,7 @@ for i, slide_data in enumerate(slides_data):
         if candidates:
             body_shape = max(candidates, key=lambda sh: sh.height)
 
-    # Aizpildām bullet punktus, ja tie definēti JSON
+    # Aizpildām bullet punktus, ja tie definēti JSON.
     if body_shape and isinstance(slide_data, dict) and 'bullets' in slide_data:
         bullets = slide_data['bullets']
         tf = body_shape.text_frame
@@ -233,10 +233,10 @@ for i, slide_data in enumerate(slides_data):
         else:
             tf.clear()
 
-# Saglabājam izveidoto prezentāciju uz diska
+# Saglabājam izveidoto prezentāciju uz diska.
 prs.save(output_path)
 
-# Dzēšam visus pagaidu attēlu failus
+# Dzēšam visus pagaidu attēlu failus.
 for p in tmp_images:
     try:
         os.remove(p)

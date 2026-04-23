@@ -11,6 +11,7 @@ const Register = ({ setUser }) => {
 
     const [loaded, setLoaded] = useState(false);
     useEffect(() => {
+        // Aktivizējam vieglu formas parādīšanās animāciju.
         setTimeout(() => setLoaded(true), 100);
     }, []);
     const [name, setName] = useState("");
@@ -24,6 +25,7 @@ const Register = ({ setUser }) => {
     const [pswrdConfFocused, sePswrdConfFocused] = useState(false);
     const handleSubmit = async (e) => {
         e.preventDefault();
+        // Reģistrācijas pieprasījumam pievienojam CSRF tokenu.
         await getCsrfToken();
         const xsrfToken = decodeURIComponent(getCookie("XSRF-TOKEN") || "");
         const res = await fetch("/register", {
@@ -42,6 +44,7 @@ const Register = ({ setUser }) => {
             credentials: "include",
         });
         if (!res.ok) {
+            // Attēlojam backend validācijas/servisa kļūdu.
             const data = await res.json();
             setModalMessage(data.message || "Registration failed");
             setModalType("error");

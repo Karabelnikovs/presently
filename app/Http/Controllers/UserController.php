@@ -15,11 +15,13 @@ class UserController extends Controller
 
     public function show()
     {
+        // Atgriežam pašreiz ielogotā lietotāja profilu.
         return response()->json(Auth::user());
     }
 
     public function update(Request $request)
     {
+        // Atjaunojam profilu un paroli tikai, ja tā padota.
         $user = Auth::user();
 
         $validated = $request->validate([

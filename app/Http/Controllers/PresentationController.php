@@ -21,6 +21,7 @@ class PresentationController extends Controller
 
     public function index()
     {
+        // Atgriežam lietotāja prezentācijas ar demo atzīmi.
         $presentations = auth()->user()->presentations->map(function ($presentation) {
             $presentation->is_demo = $this->isDemoPresentation($presentation);
             return $presentation;
@@ -30,6 +31,7 @@ class PresentationController extends Controller
 
     public function memoLeaderboard()
     {
+        // Top 10 rezultāti pēc score, laika un ieraksta secības.
         $rows = MemoLeaderboard::query()
             ->with('user:id,name')
             ->orderByDesc('score')
@@ -47,6 +49,7 @@ class PresentationController extends Controller
 
     public function submitMemoScore(Request $request)
     {
+        // Pārbaudām rezultātu un pārrēķinām gala punktus servera pusē.
         $data = $request->validate([
             'base_score' => 'required|integer|min:0|max:999999',
             'completion_seconds' => 'required|integer|min:1|max:36000',
@@ -90,6 +93,7 @@ class PresentationController extends Controller
 
     public function generate(Request $request)
     {
+        // Atzīmējam ģenerēšanu kā ilgstošu procesu.
         ignore_user_abort(true);
         if ($request->hasSession()) {
             $request->session()->save();
@@ -100,6 +104,7 @@ class PresentationController extends Controller
         $cacheKey = null;
 
         try {
+            // Validējam ievadi ģenerēšanas pieprasījumam.
             $request->validate([
                 'topic' => 'string|nullable',
                 'slides' => 'integer|min:1|max:20',
@@ -111,6 +116,7 @@ class PresentationController extends Controller
             $generationId = $request->input('generation_id') ?: (string) Str::uuid();
             $cacheKey = $this->generationCacheKey($generationId, auth()->id());
             $existing = Cache::get($cacheKey);
+            // Neļaujam vienlaikus palaist vienu un to pašu ģenerāciju.
             if (($existing['status'] ?? null) === 'processing') {
                 return response()->json([
                     'status' => 'processing',
@@ -131,6 +137,7 @@ class PresentationController extends Controller
 
             $documentContent = '';
 
+            // Ja ir DOCX, izvelkam saturu un izmantojam to promptā.
             if ($request->hasFile('docx_file')) {
                 $file = $request->file('docx_file');
                 $tempPath = $file->store('temp');
@@ -210,6 +217,7 @@ class PresentationController extends Controller
 
             $parsedData = null;
 
+            // Veidojam slaidu datus no mock vai LLM atbildes.
             if ($useMockData) {
                 $mockJson = '{
                     "slides": [
@@ -281,6 +289,7 @@ class PresentationController extends Controller
                 $parsedData['slides'][0]['title'] = $topic;
             }
 
+            // Starpfails ar datiem Python skriptam.
             $data = [
                 'topic' => $topic,
                 'slides' => $parsedData['slides'],
@@ -301,7 +310,7 @@ class PresentationController extends Controller
             // $command = escapeshellcmd('python3 ' . $pythonScript . ' ' . escapeshellarg($templateFile) . ' ' . escapeshellarg($filePath) . ' ' . escapeshellarg($dataPath));
             // $output = shell_exec($command . ' 2>&1');
 
-            // on hosted cpanel server
+            // Palaižam Python ģeneratoru ar šablonu un datiem.
             $pythonBin = env('PYTHON_BIN', 'python3');
             $command = escapeshellarg($pythonBin) . ' ' .
                 escapeshellarg($pythonScript) . ' ' .
@@ -358,6 +367,7 @@ class PresentationController extends Controller
 
     public function generationStatus(Request $request, string $generationId)
     {
+        // Frontend periodiski pārbauda šīs ģenerācijas stāvokli.
         $data = Cache::get($this->generationCacheKey($generationId, auth()->id()));
         if (!$data) {
             return response()->json(['status' => 'not_found'], 404);
@@ -419,11 +429,13 @@ class PresentationController extends Controller
 
     private function generationCacheKey(string $generationId, int $userId): string
     {
+        // Unikāla atslēga uz lietotāju + ģenerācijas ID.
         return "presentation_generation:{$userId}:{$generationId}";
     }
 
     private function calculateMemoScore(int $baseScore, int $seconds, int $moves, bool $hintUsed): int
     {
+        // Gala score formula memo spēles rezultātam.
         $timeBonus = max(0, 180 - $seconds) * 4;
         $timePenalty = max(0, $seconds - 180) * 2;
         $movePenalty = max(0, $moves - 8) * 5;
@@ -434,6 +446,7 @@ class PresentationController extends Controller
 
     private function enforceMemoLeaderboardRules(): void
     {
+        // Katram lietotājam paturam limitētu skaitu top ierakstu.
         $topThree = MemoLeaderboard::query()
             ->orderByDesc('score')
             ->orderBy('completion_seconds')
@@ -464,6 +477,7 @@ class PresentationController extends Controller
 
     private function mapLeaderboardRow(MemoLeaderboard $row): array
     {
+        // Normalizējam leaderboard atbildes formātu frontendam.
         return [
             'id' => $row->id,
             'user_id' => $row->user_id,
@@ -494,6 +508,7 @@ class PresentationController extends Controller
 
     public function destroy(int $id)
     {
+        // Dzēšam tikai paša lietotāja prezentāciju.
         $presentation = Presentation::where('user_id', auth()->id())->findOrFail($id);
 
         if (!$this->isDemoPresentation($presentation)) {
@@ -510,6 +525,7 @@ class PresentationController extends Controller
 
     private function isDemoPresentation(Presentation $presentation): bool
     {
+        // Demo failus neatļaujam dzēst no diska.
         return Str::startsWith($presentation->filename, 'demo_');
     }
 }

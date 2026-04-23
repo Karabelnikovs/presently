@@ -11,6 +11,7 @@ const Login = ({ setUser }) => {
 
     const [loaded, setLoaded] = useState(false);
     useEffect(() => {
+        // Mazs ieejas animācijas delays formai.
         setTimeout(() => setLoaded(true), 100);
     }, []);
     const [emailFocused, setEmailFocused] = useState(false);
@@ -20,6 +21,7 @@ const Login = ({ setUser }) => {
     const navigate = useNavigate();
     const handleSubmit = async (e) => {
         e.preventDefault();
+        // Pirms login iegūstam aktuālo CSRF tokenu.
         await getCsrfToken();
         const xsrfToken = decodeURIComponent(getCookie("XSRF-TOKEN") || "");
         const res = await fetch("/login", {
@@ -33,6 +35,7 @@ const Login = ({ setUser }) => {
             credentials: "include",
         });
         if (!res.ok) {
+            // Backend kļūdu parādām vienotā Alert modālī.
             const data = await res.json();
             setModalMessage(data.message || "Login failed");
             setModalType("error");

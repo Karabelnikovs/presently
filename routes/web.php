@@ -8,6 +8,7 @@ use App\Http\Controllers\Auth\RegisterController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
+// Viesiem pieejamie autentifikācijas maršruti.
 Route::middleware('guest')->group(function () {
     Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
     Route::post('/login', [LoginController::class, 'login'])->middleware('throttle:5,1');
@@ -16,8 +17,10 @@ Route::middleware('guest')->group(function () {
     Route::post('/register', [RegisterController::class, 'register']);
 });
 
+// Izlogošanās maršruts ielogotam lietotājam.
 Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
+// SPA saknes maršruts ar pāradresāciju pēc autentifikācijas.
 Route::get('/', function () {
     return Auth::check() ? redirect()->route('home') : view('app');
 });
@@ -35,6 +38,7 @@ Route::get('/my-presentations', function () {
 });
 
 
+// Aizsargātie API maršruti prezentācijām un profilam.
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/generate-presentation', [PresentationController::class, 'generate']);
     Route::get('/generation-status/{generationId}', [PresentationController::class, 'generationStatus']);
@@ -52,6 +56,7 @@ Route::get('phpinfo', function () {
     return phpinfo();
 });
 
+// Lejupielāde konkrētam ģenerētajam failam.
 Route::get('/download-presentation/{filename}', [PresentationController::class, 'downloadPresentation'])->name('presentation.download');
 Route::get('/php-check', function () {
     return response()->json([
@@ -69,6 +74,7 @@ Route::get('/php-check', function () {
         'disable_functions' => ini_get('disable_functions'),
     ]);
 });
+// SPA fallback visiem pārējiem ceļiem.
 Route::get('/{any}', function () {
     return view('app');
 })->where('any', '.*');

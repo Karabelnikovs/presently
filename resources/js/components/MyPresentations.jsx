@@ -15,12 +15,14 @@ const MyPresentations = ({ user }) => {
     const itemsPerPage = 5;
 
     useEffect(() => {
+        // Neliels delays saraksta ielādes animācijai.
         setTimeout(() => setLoaded(true), 100);
     }, []);
 
     const navigate = useNavigate();
 
     useEffect(() => {
+        // Ielādējam lietotāja prezentāciju sarakstu.
         const hasUser =
             user &&
             typeof user === "object" &&
@@ -66,6 +68,7 @@ const MyPresentations = ({ user }) => {
     };
 
     const runDelete = async (presentation) => {
+        // Dzēšam ierakstu un lokāli atjaunojam sarakstu.
         if (deletingId) return;
         setDeleteConfirm(null);
         setDeletingId(presentation.id);
@@ -92,6 +95,7 @@ const MyPresentations = ({ user }) => {
     };
 
     const getPageNumbers = () => {
+        // Gudra lapošanas numerācija ar daudzpunkti.
         const pages = [];
         const showEllipsis = totalPages > 7;
 

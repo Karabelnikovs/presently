@@ -108,11 +108,13 @@ const Generate = ({ user }) => {
     const isUnloadingRef = useRef(false);
 
     const pickRandomTopic = useCallback(() => {
+        // Ātrs helper nejaušai tēmas izvēlei.
         const idx = Math.floor(Math.random() * TOPICS.length);
         return TOPICS[idx];
     }, []);
 
     useEffect(() => {
+        // Pārbaudām sesiju un inicializējam formas sākuma stāvokli.
         const hasUser =
             user &&
             typeof user === "object" &&
@@ -136,6 +138,7 @@ const Generate = ({ user }) => {
     }, [user, navigate, pickRandomTopic]);
 
     const clearPolling = useCallback(() => {
+        // Apturam statusa polling, ja tas darbojas.
         if (!pollRef.current) return;
         clearInterval(pollRef.current);
         pollRef.current = null;
@@ -148,6 +151,7 @@ const Generate = ({ user }) => {
     const startStatusPolling = useCallback(
         (generationId) => {
             if (!generationId) return;
+            // Periodiski vaicājam backend ģenerācijas statusu.
             clearPolling();
             setIsLoading(true);
             setIsGameOpen(true);
@@ -221,6 +225,7 @@ const Generate = ({ user }) => {
     }, []);
 
     useEffect(() => {
+        // Atjaunojam draftu un piedāvājam turpināt iepriekšējo ģenerāciju.
         const savedDraft = localStorage.getItem(DRAFT_KEY);
         if (savedDraft) {
             try {
@@ -259,6 +264,7 @@ const Generate = ({ user }) => {
     useEffect(() => () => clearPolling(), [clearPolling]);
 
     const handleFileChange = (e) => {
+        // Validējam DOCX tipu un izmēru pirms nosūtīšanas.
         const selectedFile = e.dataTransfer
             ? e.dataTransfer.files[0]
             : e.target.files[0];
@@ -319,6 +325,7 @@ const Generate = ({ user }) => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        // Startējam jaunu ģenerāciju un saglabājam ACTIVE_KEY.
         clearPolling();
         const generationId =
             (typeof crypto !== "undefined" && crypto.randomUUID?.()) ||
@@ -411,6 +418,7 @@ const Generate = ({ user }) => {
     };
 
     const handleOpenMemoGame = () => {
+        // Atveram memo spēli arī bez ģenerēšanas procesa.
         setIsMemoOnlyMode(true);
         setGenerationStatus("idle");
         setGenerationMessage("");

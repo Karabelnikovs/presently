@@ -9,6 +9,7 @@ class MemoLeaderboard extends Model
 {
     use HasFactory;
 
+    // Tabula memo spēles rezultātu glabāšanai.
     protected $table = 'memo_leaderboard';
 
     protected $fillable = [
@@ -22,6 +23,7 @@ class MemoLeaderboard extends Model
 
     public function user()
     {
+        // Rezultāts pieder konkrētam lietotājam.
         return $this->belongsTo(User::class);
     }
 }

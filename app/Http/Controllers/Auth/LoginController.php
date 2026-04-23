@@ -9,6 +9,7 @@ use Illuminate\Http\JsonResponse;
 
 class LoginController extends Controller
 {
+    // Noklusējuma lapa pēc veiksmīgas autorizācijas.
     protected $redirectTo = '/generate';
 
     public function __construct()
@@ -18,11 +19,13 @@ class LoginController extends Controller
 
     public function showLoginForm()
     {
+        // Frontend single page app ielāde pieteikšanās skatam.
         return view('app');
     }
 
     public function login(Request $request)
     {
+        //validējam  pieteikšanās laukus.
         $request->validate([
             'email' => 'required|email|string',
             'password' => 'required|string',
@@ -31,6 +34,7 @@ class LoginController extends Controller
         $credentials = $request->only('email', 'password');
 
         if (!Auth::attempt($credentials, $request->filled('remember'))) {
+            // Atgriežam korektu kļūdu gan API, gan web formai.
             if ($request->wantsJson()) {
                 return response()->json(['message' => 'Invalid credentials'], 401);
             }
@@ -50,6 +54,7 @@ class LoginController extends Controller
 
     public function logout(Request $request)
     {
+        // droši izbeidzam sesiju un izveidojam jaunu CSRF tokenu
         Auth::logout();
 
         $request->session()->invalidate();

@@ -13,6 +13,7 @@ class User extends Authenticatable
 {
     use HasFactory, Notifiable;
 
+    // Lauki, kurus drīkst aizpildīt masveidā.
     protected $fillable = [
         'name',
         'email',
@@ -31,11 +32,13 @@ class User extends Authenticatable
 
     public function presentations()
     {
+        // Lietotāja izveidotās prezentācijas.
         return $this->hasMany(Presentation::class);
     }
 
     public function memoScores()
     {
+        // Lietotāja memo spēles rezultātu vēsture.
         return $this->hasMany(MemoLeaderboard::class);
     }
 }

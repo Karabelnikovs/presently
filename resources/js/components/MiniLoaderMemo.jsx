@@ -20,6 +20,7 @@ const ICONS = [
 ];
 
 function shuffle(list) {
+    // Fisher-Yates(sajaukšanas algoritms, ko atradu jautājot ai) sajaukšana vienmērīgai kāršu secībai.
     const copy = [...list];
     for (let i = copy.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -29,6 +30,7 @@ function shuffle(list) {
 }
 
 function makeDeck() {
+    // Izveidojam pārus un sajaucam kārtis
     return shuffle(
         shuffle(ICONS).slice(0, PAIRS).flatMap((icon, id) => [
             { id: `${icon}-${id}-a`, icon, matched: false },
@@ -38,6 +40,7 @@ function makeDeck() {
 }
 
 function calcFinalScore(baseScore, seconds, moves, hintUsed) {
+    // Gala punkti ar laika, gājienu un hint korekciju.
     const timeBonus = Math.max(0, 180 - seconds) * 4;
     const timePenalty = Math.max(0, seconds - 180) * 2;
     const movePenalty = Math.max(0, moves - 8) * 5;
@@ -103,6 +106,7 @@ export default function MiniLoaderMemo({
 
     useEffect(() => {
         if (!isOpen) return;
+        // Atiestatām spēles stāvokli katrā jaunā atvēršanā.
         setDeck(makeDeck());
         setFlipped([]);
         setDisabled(false);
@@ -122,6 +126,7 @@ export default function MiniLoaderMemo({
         if (!isOpen) return;
         let cancelled = false;
         const loadLeaderboard = async () => {
+            // Ielādējam aktuālo topu no backend.
             setLeaderboardLoading(true);
             try {
                 const res = await fetch("/api/memo-leaderboard", {
@@ -206,6 +211,7 @@ export default function MiniLoaderMemo({
     }
 
     function handleFlip(index) {
+        // Atļaujam izvēlēties max divas kārtis vienā gājienā.
         if (disabled || previewing || peekActive || completed) return;
         if (flipped.includes(index) || deck[index].matched) return;
         if (flipped.length === 0) {
@@ -216,6 +222,7 @@ export default function MiniLoaderMemo({
     }
 
     function handleHint() {
+        // Vienreizējs "atklāj visu" hints uz īsu brīdi.
         if (hintUsed || disabled || previewing || completed || flipped.length)
             return;
         setHintUsed(true);

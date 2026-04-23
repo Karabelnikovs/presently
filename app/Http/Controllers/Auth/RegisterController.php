@@ -17,15 +17,18 @@ use Illuminate\Support\Str;
 
 class RegisterController extends Controller
 {
+    // Pēc reģistrācijas novirzām uz sākuma skatu
     protected $redirectTo = '/';
 
     public function showRegistrationForm()
     {
+        // Frontend single page app ielāde reģistrācijas skatam.
         return view('app');
     }
 
     public function register(Request $request)
     {
+        // Pilnais reģistrācijas cikls: validācija, izveide, ielogošana.
         $this->validator($request->all())->validate();
 
         event(new Registered($user = $this->create($request->all())));
@@ -43,6 +46,7 @@ class RegisterController extends Controller
 
     protected function validator(array $data)
     {
+        // Reģistrācijas datu noteikumi.
         return Validator::make($data, [
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
@@ -52,6 +56,7 @@ class RegisterController extends Controller
 
     protected function create(array $data)
     {
+        // Saglabājam lietotāju ar hashotu paroli.
         return User::create([
             'name' => $data['name'],
             'email' => $data['email'],
@@ -61,11 +66,13 @@ class RegisterController extends Controller
 
     protected function guard()
     {
+        // Izmantojam noklusēto autentifikācijas guard
         return Auth::guard();
     }
 
     protected function registered(Request $request, $user)
     {
+        // Pēc reģistrācijas iedodam demo prezentācijas lietotājam
         $this->createDemoPresentations($user);
 
         if ($request->wantsJson()) {
@@ -77,6 +84,7 @@ class RegisterController extends Controller
 
     protected function redirectPath()
     {
+        // Saglabājam Laravel standarta redirect uzvedību.
         if (method_exists($this, 'redirectTo')) {
             return $this->redirectTo();
         }
@@ -86,6 +94,7 @@ class RegisterController extends Controller
 
     protected function createDemoPresentations(User $user): void
     {
+        // Importējam demo failus tikai jaunam kontam.
         if ($user->presentations()->exists()) {
             return;
         }

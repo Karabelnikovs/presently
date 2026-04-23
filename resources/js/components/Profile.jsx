@@ -26,6 +26,7 @@ const Profile = ({ user, setUser }) => {
     const [pswrdConfFocused, sePswrdConfFocused] = useState(false);
 
     useEffect(() => {
+        // Ielādējam profilu no API, ja user props vēl nav pieejams.
         const hasUser =
             user &&
             typeof user === "object" &&
@@ -57,6 +58,7 @@ const Profile = ({ user, setUser }) => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        // Sūtām tikai tos laukus, kas jāatjauno.
         await getCsrfToken();
         const xsrfToken = decodeURIComponent(getCookie("XSRF-TOKEN") || "");
 
@@ -76,6 +78,7 @@ const Profile = ({ user, setUser }) => {
             credentials: "include",
         });
         if (!res.ok) {
+            // Kļūdu parādām tajā pašā Alert komponentē.
             const data = await res.json();
             setModalMessage(data.message || "Update failed");
             setModalType("error");

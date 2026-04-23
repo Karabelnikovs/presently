@@ -5,6 +5,7 @@ const Welcome = () => {
     const [isVisible, setIsVisible] = useState(false);
 
     useEffect(() => {
+        // Aktivizējam hero sekcijas ielādes animāciju.
         setIsVisible(true);
     }, []);
 
@@ -84,6 +85,7 @@ const Welcome = () => {
 
             <section className="relative z-10 px-4 py-16 md:py-24">
                 <div className="max-w-6xl mx-auto">
+                    {/* Funkcionalitāšu kartītes galvenajiem ieguvumiem. */}
                     <h2 className="text-4xl md:text-5xl font-bold text-center text-gray-900 mb-4">
                         Everything You Need
                     </h2>

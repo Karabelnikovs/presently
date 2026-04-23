@@ -7,6 +7,7 @@ const Alert = ({ isOpen, onClose, message, type = "success" }) => {
     const ANIM_MS = 600;
 
     useEffect(() => {
+        // Atveram/aizveram modāli ar īsu fade animāciju.
         let t;
         if (isOpen) {
             setRender(true);
@@ -19,8 +20,9 @@ const Alert = ({ isOpen, onClose, message, type = "success" }) => {
     }, [isOpen]);
 
     useEffect(() => {
+        // Auto aizvēršana pēc 5 sekundēm.
         if (!isOpen) return;
-        const timer = setTimeout(() => onClose(), 3000);
+        const timer = setTimeout(() => onClose(), 5000);
         return () => clearTimeout(timer);
     }, [isOpen, onClose]);
 
@@ -94,6 +96,7 @@ export const ConfirmDialog = ({
     const ANIM_MS = 600;
 
     useEffect(() => {
+        // Sinhronizējam redzamību ar animācijas stāvokli.
         let t;
         if (isOpen) {
             setRender(true);
