@@ -88,6 +88,7 @@ const Generate = ({ user }) => {
     const [file, setFile] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
     const [isGameOpen, setIsGameOpen] = useState(false);
+    const [isMemoOnlyMode, setIsMemoOnlyMode] = useState(false);
     const [generationStatus, setGenerationStatus] = useState("idle");
     const [generationMessage, setGenerationMessage] = useState("");
     const [downloadFile, setDownloadFile] = useState("");
@@ -150,6 +151,7 @@ const Generate = ({ user }) => {
             clearPolling();
             setIsLoading(true);
             setIsGameOpen(true);
+            setIsMemoOnlyMode(false);
             setGenerationStatus("loading");
             setGenerationMessage(
                 "Please wait while your presentation is generated."
@@ -334,6 +336,7 @@ const Generate = ({ user }) => {
         );
         setIsLoading(true);
         setIsGameOpen(true);
+        setIsMemoOnlyMode(false);
         setGenerationStatus("loading");
         setGenerationMessage("Please wait while your presentation is generated.");
         setDownloadFile("");
@@ -408,6 +411,7 @@ const Generate = ({ user }) => {
     };
 
     const handleOpenMemoGame = () => {
+        setIsMemoOnlyMode(true);
         setGenerationStatus("idle");
         setGenerationMessage("");
         setDownloadFile("");
@@ -429,6 +433,7 @@ const Generate = ({ user }) => {
                 isGenerating={isLoading}
                 status={generationStatus}
                 statusMessage={generationMessage}
+                isMemoOnlyMode={isMemoOnlyMode}
                 onClose={() => setIsGameOpen(false)}
                 onDownload={
                     downloadFile

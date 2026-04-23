@@ -38,6 +38,8 @@ Route::get('/my-presentations', function () {
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/generate-presentation', [PresentationController::class, 'generate']);
     Route::get('/generation-status/{generationId}', [PresentationController::class, 'generationStatus']);
+    Route::get('/api/memo-leaderboard', [PresentationController::class, 'memoLeaderboard']);
+    Route::post('/api/memo-leaderboard', [PresentationController::class, 'submitMemoScore']);
     Route::get('/api/my-presentations', [PresentationController::class, 'index']);
     Route::delete('/api/my-presentations/{id}', [PresentationController::class, 'destroy']);
     Route::get('/api/profile', [UserController::class, 'show']);

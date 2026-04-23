@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { getCookie, getCsrfToken } from "../utils/csrf";
 
 const PAIRS = 8;
 const PREVIEW_MS = 300;
@@ -36,11 +37,23 @@ function makeDeck() {
     );
 }
 
+function calcFinalScore(baseScore, seconds, moves, hintUsed) {
+    const timeBonus = Math.max(0, 180 - seconds) * 4;
+    const timePenalty = Math.max(0, seconds - 180) * 2;
+    const movePenalty = Math.max(0, moves - 8) * 5;
+    const hintPenalty = hintUsed ? 35 : 0;
+    return Math.max(
+        0,
+        baseScore + timeBonus - timePenalty - movePenalty - hintPenalty
+    );
+}
+
 export default function MiniLoaderMemo({
     isOpen = false,
     isGenerating = false,
     status = "idle",
     statusMessage = "",
+    isMemoOnlyMode = false,
     onClose = () => {},
     onDownload = null,
 }) {
@@ -55,8 +68,18 @@ export default function MiniLoaderMemo({
     const [previewing, setPreviewing] = useState(true);
     const [peekActive, setPeekActive] = useState(false);
     const [hintUsed, setHintUsed] = useState(false);
+    const [leaderboard, setLeaderboard] = useState([]);
+    const [leaderboardLoading, setLeaderboardLoading] = useState(false);
+    const [scoreSubmitted, setScoreSubmitted] = useState(false);
+    const [submittedScore, setSubmittedScore] = useState(null);
+    const [showTopTen, setShowTopTen] = useState(false);
 
     const completed = matchedCount === PAIRS;
+    const finalScore = useMemo(
+        () => calcFinalScore(score, elapsed, moves || PAIRS, hintUsed),
+        [score, elapsed, moves, hintUsed]
+    );
+    const topThree = useMemo(() => leaderboard.slice(0, 3), [leaderboard]);
     const progress = useMemo(
         () => Math.round((matchedCount / PAIRS) * 100),
         [matchedCount]
@@ -90,6 +113,34 @@ export default function MiniLoaderMemo({
         setElapsed(0);
         setPeekActive(false);
         setHintUsed(false);
+        setScoreSubmitted(false);
+        setSubmittedScore(null);
+        setShowTopTen(false);
+    }, [isOpen]);
+
+    useEffect(() => {
+        if (!isOpen) return;
+        let cancelled = false;
+        const loadLeaderboard = async () => {
+            setLeaderboardLoading(true);
+            try {
+                const res = await fetch("/api/memo-leaderboard", {
+                    headers: { Accept: "application/json" },
+                    credentials: "include",
+                });
+                if (!res.ok) throw new Error("Failed to load leaderboard");
+                const data = await res.json();
+                if (!cancelled) setLeaderboard(Array.isArray(data.rows) ? data.rows : []);
+            } catch (_) {
+                if (!cancelled) setLeaderboard([]);
+            } finally {
+                if (!cancelled) setLeaderboardLoading(false);
+            }
+        };
+        loadLeaderboard();
+        return () => {
+            cancelled = true;
+        };
     }, [isOpen]);
 
     useEffect(() => {
@@ -149,6 +200,9 @@ export default function MiniLoaderMemo({
         setElapsed(0);
         setPeekActive(false);
         setHintUsed(false);
+        setScoreSubmitted(false);
+        setSubmittedScore(null);
+        setShowTopTen(false);
     }
 
     function handleFlip(index) {
@@ -173,16 +227,58 @@ export default function MiniLoaderMemo({
         }, HINT_MS);
     }
 
+    useEffect(() => {
+        if (!isOpen || !completed || scoreSubmitted) return;
+        let cancelled = false;
+        const submitScore = async () => {
+            try {
+                await getCsrfToken();
+                const xsrfToken = decodeURIComponent(
+                    getCookie("XSRF-TOKEN") || ""
+                );
+                const res = await fetch("/api/memo-leaderboard", {
+                    method: "POST",
+                    headers: {
+                        Accept: "application/json",
+                        "Content-Type": "application/json",
+                        "X-XSRF-TOKEN": xsrfToken,
+                    },
+                    credentials: "include",
+                    body: JSON.stringify({
+                        base_score: score,
+                        completion_seconds: elapsed || 1,
+                        moves: moves || PAIRS,
+                        hint_used: hintUsed,
+                    }),
+                });
+                if (!res.ok) throw new Error("Failed to submit score");
+                const data = await res.json();
+                if (cancelled) return;
+                if (typeof data.score === "number") setSubmittedScore(data.score);
+                setLeaderboard(Array.isArray(data.rows) ? data.rows : []);
+                setScoreSubmitted(true);
+            } catch (_) {
+                if (!cancelled) setScoreSubmitted(true);
+            }
+        };
+        submitScore();
+        return () => {
+            cancelled = true;
+        };
+    }, [completed, elapsed, hintUsed, isOpen, moves, score, scoreSubmitted]);
+
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 bg-slate-900/35 p-3 backdrop-blur-[2px] sm:p-4">
-            <div className="mx-auto flex h-full max-w-5xl items-center justify-center">
-                <div className="w-full max-h-[calc(100vh-1.5rem)] overflow-hidden rounded-3xl border border-slate-200 bg-white/95 shadow-2xl shadow-slate-300/50">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/35 p-3 backdrop-blur-[2px] sm:p-4">
+            <div className="mx-auto flex min-h-full max-w-5xl items-start justify-center sm:items-center">
+                <div className="my-2 w-full max-h-[calc(100vh-1.5rem)] overflow-y-auto rounded-3xl border border-slate-200 bg-white/95 shadow-2xl shadow-slate-300/50 sm:my-0 sm:overflow-hidden">
                     <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 sm:px-5">
                         <div>
                             <h3 className="text-lg font-bold text-slate-900 sm:text-xl">
-                                Generating presentation
+                                {isMemoOnlyMode
+                                    ? "Memo game"
+                                    : "Generating presentation"}
                             </h3>
                             <p className="text-xs text-slate-500 sm:text-sm">
                                 {statusText}
@@ -213,7 +309,7 @@ export default function MiniLoaderMemo({
                                             Score
                                         </div>
                                         <div className="font-bold text-slate-900">
-                                            {score}
+                                            {submittedScore ?? finalScore}
                                         </div>
                                     </div>
                                     <div className="rounded-xl border border-emerald-200 bg-white p-2">
@@ -249,6 +345,49 @@ export default function MiniLoaderMemo({
                                         Close game
                                     </button>
                                 </div>
+                            </div>
+
+                            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                                <div className="mb-2 text-sm font-semibold text-slate-800">
+                                    Leaderboard
+                                </div>
+                                {leaderboardLoading ? (
+                                    <div className="text-xs text-slate-500">
+                                        Loading...
+                                    </div>
+                                ) : topThree.length ? (
+                                    <div className="space-y-2">
+                                        {topThree.map((row, index) => (
+                                            <div
+                                                key={row.id}
+                                                className="flex items-center justify-between rounded-lg border border-slate-100 px-2 py-1.5 text-xs"
+                                            >
+                                                <div className="truncate pr-2">
+                                                    <span className="font-semibold text-slate-700">
+                                                        #{index + 1}
+                                                    </span>{" "}
+                                                    <span className="text-slate-900">
+                                                        {row.name}
+                                                    </span>
+                                                </div>
+                                                <div className="text-slate-700">
+                                                    {row.score} · {row.completion_seconds}s
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="text-xs text-slate-500">
+                                        No scores yet.
+                                    </div>
+                                )}
+                                <button
+                                    type="button"
+                                    onClick={() => setShowTopTen(true)}
+                                    className="mt-3 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
+                                >
+                                    See top 10
+                                </button>
                             </div>
                         </div>
                     ) : (
@@ -318,7 +457,7 @@ export default function MiniLoaderMemo({
                                 <div className="grid grid-cols-2 gap-2 text-sm">
                                     <div className="rounded-xl border border-slate-200 bg-white p-3">
                                         <div className="text-xs text-slate-500">
-                                            Score
+                                            Base score
                                         </div>
                                         <div className="text-lg font-bold text-slate-900">
                                             {score}
@@ -347,6 +486,15 @@ export default function MiniLoaderMemo({
                                         <div className="text-lg font-bold text-slate-900">
                                             {matchedCount}/{PAIRS}
                                         </div>
+                                    </div>
+                                </div>
+
+                                <div className="rounded-xl border border-slate-200 bg-white p-3 text-sm">
+                                    <div className="text-xs text-slate-500">
+                                        Final score (time impact)
+                                    </div>
+                                    <div className="text-lg font-bold text-slate-900">
+                                        {finalScore}
                                     </div>
                                 </div>
 
@@ -407,11 +555,88 @@ export default function MiniLoaderMemo({
                                         </button>
                                     )}
                                 </div>
+
+                                <div className="rounded-xl border border-slate-200 bg-white p-3">
+                                    <div className="mb-2 text-xs font-semibold text-slate-700">
+                                        Leaderboard
+                                    </div>
+                                    {leaderboardLoading ? (
+                                        <div className="text-xs text-slate-500">
+                                            Loading...
+                                        </div>
+                                    ) : topThree.length ? (
+                                        <div className="space-y-1.5">
+                                            {topThree.map((row, index) => (
+                                                <div
+                                                    key={row.id}
+                                                    className="flex items-center justify-between text-xs text-slate-700"
+                                                >
+                                                    <div className="truncate pr-2">
+                                                        #{index + 1} {row.name}
+                                                    </div>
+                                                    <div>
+                                                        {row.score} ({row.completion_seconds}s)
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="text-xs text-slate-500">
+                                            No scores yet.
+                                        </div>
+                                    )}
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowTopTen(true)}
+                                        className="mt-2 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
+                                    >
+                                        See top 10
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     )}
                 </div>
             </div>
+            {showTopTen && (
+                <div className="absolute inset-0 z-10 flex items-center justify-center bg-slate-900/40 p-4">
+                    <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-4 shadow-xl">
+                        <div className="mb-3 flex items-center justify-between">
+                            <h4 className="text-sm font-bold text-slate-900">
+                                Top 10 leaderboard
+                            </h4>
+                            <button
+                                type="button"
+                                onClick={() => setShowTopTen(false)}
+                                className="rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+                            >
+                                Close
+                            </button>
+                        </div>
+                        <div className="max-h-[55vh] space-y-1.5 overflow-y-auto">
+                            {leaderboard.length ? (
+                                leaderboard.map((row, index) => (
+                                    <div
+                                        key={`top10-${row.id}`}
+                                        className="flex items-center justify-between rounded-lg border border-slate-100 px-2 py-1.5 text-xs text-slate-700"
+                                    >
+                                        <div className="truncate pr-2">
+                                            #{index + 1} {row.name}
+                                        </div>
+                                        <div>
+                                            {row.score} ({row.completion_seconds}s)
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="text-xs text-slate-500">
+                                    No scores yet.
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

@@ -6,6 +6,7 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use App\Models\MemoLeaderboard;
 // use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
@@ -31,5 +32,10 @@ class User extends Authenticatable
     public function presentations()
     {
         return $this->hasMany(Presentation::class);
+    }
+
+    public function memoScores()
+    {
+        return $this->hasMany(MemoLeaderboard::class);
     }
 }
