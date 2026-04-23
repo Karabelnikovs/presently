@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\MemoController;
 use App\Http\Controllers\PresentationController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\Auth\LoginController;
@@ -42,8 +43,8 @@ Route::get('/my-presentations', function () {
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/generate-presentation', [PresentationController::class, 'generate']);
     Route::get('/generation-status/{generationId}', [PresentationController::class, 'generationStatus']);
-    Route::get('/api/memo-leaderboard', [PresentationController::class, 'memoLeaderboard']);
-    Route::post('/api/memo-leaderboard', [PresentationController::class, 'submitMemoScore']);
+    Route::get('/api/memo-leaderboard', [MemoController::class, 'memoLeaderboard']);
+    Route::post('/api/memo-leaderboard', [MemoController::class, 'submitMemoScore']);
     Route::get('/api/my-presentations', [PresentationController::class, 'index']);
     Route::delete('/api/my-presentations/{id}', [PresentationController::class, 'destroy']);
     Route::get('/api/profile', [UserController::class, 'show']);

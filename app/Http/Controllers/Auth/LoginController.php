@@ -12,10 +12,7 @@ class LoginController extends Controller
     // Noklusējuma lapa pēc veiksmīgas autorizācijas.
     protected $redirectTo = '/generate';
 
-    public function __construct()
-    {
-        // $this->middleware('guest')->except('logout');
-    }
+
 
     public function showLoginForm()
     {
