@@ -9,8 +9,8 @@ const Welcome = () => {
     }, []);
 
     return (
-        <div className="relative min-h-screen w-full overflow-hidden">
-            <div className="pointer-events-none absolute -top-28 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-blue-300/25 blur-3xl" />
+        <div className="relative min-h-screen w-full self-start overflow-hidden">
+            <div className="pointer-events-none absolute top-20 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-blue-400/25 blur-3xl" />
             <div className="pointer-events-none absolute -right-24 top-1/3 h-72 w-72 rounded-full bg-fuchsia-300/20 blur-3xl" />
             <style>{`
                 @keyframes float {

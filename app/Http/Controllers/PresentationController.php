@@ -173,8 +173,17 @@ class PresentationController extends Controller
                 $systemPrompt = "You are a JSON generator. Always output only valid JSON as specified in the prompt.";
 
                 for ($try = 1; $try <= 3; $try++) {
-                    $response = Http::timeout(240)->post('http://127.0.0.1:11434/api/generate', [
-                        'model' => 'llama3.1:8b',
+                    // local
+                    // $response = Http::timeout(240)->post('http://127.0.0.1:11434/api/generate', [
+                    //     'model' => 'llama3.1:8b',
+                    //     'prompt' => $prompt,
+                    //     'system' => $systemPrompt,
+                    //     'format' => 'json',
+                    //     'stream' => false,
+                    // ]);
+
+                    $response = Http::timeout(240)->post(rtrim(env('LLM_BASE_URL'), '/') . '/api/generate', [
+                        'model' => env('LLM_MODEL', 'llama3.1:8b'),
                         'prompt' => $prompt,
                         'system' => $systemPrompt,
                         'format' => 'json',

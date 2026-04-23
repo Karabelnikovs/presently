@@ -73,7 +73,10 @@ function App() {
                             path="/register"
                             element={<Register setUser={setUser} />}
                         />
-                        <Route path="/" element={<Welcome />} />
+                        <Route
+                            path="/"
+                            element={user ? <Navigate to="/generate" replace /> : <Welcome />}
+                        />
                     </Routes>
                 )}
             </main>
