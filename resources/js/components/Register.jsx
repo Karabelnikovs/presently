@@ -18,6 +18,7 @@ const Register = ({ setUser }) => {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [passwordConfirmation, setPasswordConfirmation] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const navigate = useNavigate();
     const [nameFocused, setNameFocused] = useState(false);
     const [emailFocused, setEmailFocused] = useState(false);
@@ -25,37 +26,42 @@ const Register = ({ setUser }) => {
     const [pswrdConfFocused, sePswrdConfFocused] = useState(false);
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (isSubmitting) return;
+        setIsSubmitting(true);
         // Reģistrācijas pieprasījumam pievienojam CSRF tokenu.
-        await getCsrfToken();
-        const xsrfToken = decodeURIComponent(getCookie("XSRF-TOKEN") || "");
-        const res = await fetch("/register", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/x-www-form-urlencoded",
-                "X-XSRF-TOKEN": xsrfToken,
-                Accept: "application/json",
-            },
-            body: new URLSearchParams({
-                name,
-                email,
-                password,
-                password_confirmation: passwordConfirmation,
-            }),
-            credentials: "include",
-        });
-        if (!res.ok) {
-            // Attēlojam backend validācijas/servisa kļūdu.
+        try {
+            await getCsrfToken();
+            const xsrfToken = decodeURIComponent(getCookie("XSRF-TOKEN") || "");
+            const res = await fetch("/register", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "X-XSRF-TOKEN": xsrfToken,
+                    Accept: "application/json",
+                },
+                body: new URLSearchParams({
+                    name,
+                    email,
+                    password,
+                    password_confirmation: passwordConfirmation,
+                }),
+                credentials: "include",
+            });
+            if (!res.ok) {
+                // Attēlojam backend validācijas/servisa kļūdu.
+                const data = await res.json();
+                setModalMessage(data.message || "Registration failed");
+                setModalType("error");
+                setModalOpen(true);
+                return;
+            }
             const data = await res.json();
-            setModalMessage(data.message || "Registration failed");
-            setModalType("error");
-            setModalOpen(true);
-
-            return;
+            setUser(data.user);
+            await getCsrfToken();
+            navigate("/generate");
+        } finally {
+            setIsSubmitting(false);
         }
-        const data = await res.json();
-        setUser(data.user);
-        await getCsrfToken();
-        navigate("/generate");
     };
     return (
         <div
@@ -227,9 +233,10 @@ const Register = ({ setUser }) => {
                 </div>
                 <button
                     type="submit"
+                    disabled={isSubmitting}
                     className="w-full rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-2.5 font-semibold text-white shadow-lg shadow-blue-200 transition duration-150 ease-out hover:brightness-105 active:scale-95"
                 >
-                    Register
+                    {isSubmitting ? "Registering..." : "Register"}
                 </button>
             </form>
             <Alert

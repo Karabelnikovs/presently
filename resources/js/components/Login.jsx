@@ -18,35 +18,41 @@ const Login = ({ setUser }) => {
     const [passwordFocused, setPasswordFocused] = useState(false);
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const navigate = useNavigate();
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (isSubmitting) return;
+        setIsSubmitting(true);
         // Pirms login iegūstam aktuālo CSRF tokenu.
-        await getCsrfToken();
-        const xsrfToken = decodeURIComponent(getCookie("XSRF-TOKEN") || "");
-        const res = await fetch("/login", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/x-www-form-urlencoded",
-                "X-XSRF-TOKEN": xsrfToken,
-                Accept: "application/json",
-            },
-            body: new URLSearchParams({ email, password }),
-            credentials: "include",
-        });
-        if (!res.ok) {
-            // Backend kļūdu parādām vienotā Alert modālī.
+        try {
+            await getCsrfToken();
+            const xsrfToken = decodeURIComponent(getCookie("XSRF-TOKEN") || "");
+            const res = await fetch("/login", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "X-XSRF-TOKEN": xsrfToken,
+                    Accept: "application/json",
+                },
+                body: new URLSearchParams({ email, password }),
+                credentials: "include",
+            });
+            if (!res.ok) {
+                // Backend kļūdu parādām vienotā Alert modālī.
+                const data = await res.json();
+                setModalMessage(data.message || "Login failed");
+                setModalType("error");
+                setModalOpen(true);
+                return;
+            }
             const data = await res.json();
-            setModalMessage(data.message || "Login failed");
-            setModalType("error");
-            setModalOpen(true);
-
-            return;
+            setUser(data.user);
+            await getCsrfToken();
+            navigate("/generate");
+        } finally {
+            setIsSubmitting(false);
         }
-        const data = await res.json();
-        setUser(data.user);
-        await getCsrfToken();
-        navigate("/generate");
     };
     return (
         <div
@@ -138,9 +144,10 @@ const Login = ({ setUser }) => {
                 </div>
                 <button
                     type="submit"
+                    disabled={isSubmitting}
                     className="w-full rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-2.5 font-semibold text-white shadow-lg shadow-blue-200 transition duration-150 ease-out hover:brightness-105 active:scale-95"
                 >
-                    Login
+                    {isSubmitting ? "Logging in..." : "Login"}
                 </button>
             </form>
             <Alert

@@ -37,8 +37,8 @@ class PresentationController extends Controller
             $request->session()->save();
         }
         $useMockData = false;
-        set_time_limit(300);
-        ini_set('max_execution_time', 300);
+        set_time_limit(360);
+        ini_set('max_execution_time', 360);
         $cacheKey = null;
 
         try {
@@ -183,7 +183,7 @@ class PresentationController extends Controller
                 Log::info('trying to generate presentation');
                 for ($try = 1; $try <= 3; $try++) {
                     // local llama server (download from https://ollama.com/download/mac llama3.1:8b)
-                    // $response = Http::timeout(240)->post('http://127.0.0.1:11434/api/generate', [
+                    // $response = Http::timeout(360)->post('http://127.0.0.1:11434/api/generate', [
                     //     'model' => 'llama3.1:8b',
                     //     'prompt' => $prompt,
                     //     'system' => $systemPrompt,
@@ -192,7 +192,7 @@ class PresentationController extends Controller
                     // ]);
 
                     // hosted llama on vps server
-                    $response = Http::timeout(240)
+                    $response = Http::timeout(360)
                         ->withHeaders(['X-API-Key' => env('LLM_API_KEY')])
                         ->post(rtrim(env('LLM_BASE_URL'), '/') . '/api/generate', [
                             'model' => env('LLM_MODEL', 'llama3.1:8b'),
